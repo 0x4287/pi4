@@ -1,0 +1,241 @@
+,program,flags,runtime
+0,determined_forwarding_safe,,104.876000
+1,determined_forwarding_safe,,102.184000
+2,determined_forwarding_safe,,109.163000
+3,determined_forwarding_safe,,111.308000
+4,determined_forwarding_safe,,106.588000
+5,determined_forwarding_safe,-f,111.555000
+6,determined_forwarding_safe,-f,100.828000
+7,determined_forwarding_safe,-f,106.689000
+8,determined_forwarding_safe,-f,117.299000
+9,determined_forwarding_safe,-f,115.434000
+10,determined_forwarding_safe,-i,103.908000
+11,determined_forwarding_safe,-i,113.712000
+12,determined_forwarding_safe,-i,116.698000
+13,determined_forwarding_safe,-i,106.823000
+14,determined_forwarding_safe,-i,111.307000
+15,determined_forwarding_safe,-n,109.886000
+16,determined_forwarding_safe,-n,104.419000
+17,determined_forwarding_safe,-n,106.728000
+18,determined_forwarding_safe,-n,106.673000
+19,determined_forwarding_safe,-n,107.861000
+20,determined_forwarding_safe,-d,79.531000
+21,determined_forwarding_safe,-d,81.694000
+22,determined_forwarding_safe,-d,80.959000
+23,determined_forwarding_safe,-d,80.639000
+24,determined_forwarding_safe,-d,83.176000
+25,determined_forwarding_safe,-f -i -n -d,82.964000
+26,determined_forwarding_safe,-f -i -n -d,94.591000
+27,determined_forwarding_safe,-f -i -n -d,81.453000
+28,determined_forwarding_safe,-f -i -n -d,84.312000
+29,determined_forwarding_safe,-f -i -n -d,79.955000
+30,determined_forwarding_unsafe,,615.554000
+31,determined_forwarding_unsafe,,610.021000
+32,determined_forwarding_unsafe,,665.707000
+33,determined_forwarding_unsafe,,618.935000
+34,determined_forwarding_unsafe,,620.580000
+35,determined_forwarding_unsafe,-f,593.001000
+36,determined_forwarding_unsafe,-f,602.265000
+37,determined_forwarding_unsafe,-f,594.262000
+38,determined_forwarding_unsafe,-f,579.468000
+39,determined_forwarding_unsafe,-f,593.770000
+40,determined_forwarding_unsafe,-i,591.384000
+41,determined_forwarding_unsafe,-i,581.641000
+42,determined_forwarding_unsafe,-i,579.928000
+43,determined_forwarding_unsafe,-i,591.163000
+44,determined_forwarding_unsafe,-i,585.870000
+45,determined_forwarding_unsafe,-n,588.145000
+46,determined_forwarding_unsafe,-n,584.977000
+47,determined_forwarding_unsafe,-n,586.292000
+48,determined_forwarding_unsafe,-n,596.228000
+49,determined_forwarding_unsafe,-n,576.626000
+50,determined_forwarding_unsafe,-d,75.220000
+51,determined_forwarding_unsafe,-d,71.414000
+52,determined_forwarding_unsafe,-d,71.058000
+53,determined_forwarding_unsafe,-d,72.856000
+54,determined_forwarding_unsafe,-d,70.102000
+55,determined_forwarding_unsafe,-f -i -n -d,68.781000
+56,determined_forwarding_unsafe,-f -i -n -d,70.324000
+57,determined_forwarding_unsafe,-f -i -n -d,80.461000
+58,determined_forwarding_unsafe,-f -i -n -d,71.644000
+59,determined_forwarding_unsafe,-f -i -n -d,70.633000
+60,header_dependency_safe,,1804.844000
+61,header_dependency_safe,,1817.499000
+62,header_dependency_safe,,1802.417000
+63,header_dependency_safe,,1798.270000
+64,header_dependency_safe,,1797.851000
+65,header_dependency_safe,-f,1800.949000
+66,header_dependency_safe,-f,1798.679000
+67,header_dependency_safe,-f,1794.796000
+68,header_dependency_safe,-f,1819.002000
+69,header_dependency_safe,-f,1817.180000
+70,header_dependency_safe,-i,1802.146000
+71,header_dependency_safe,-i,1784.642000
+72,header_dependency_safe,-i,1794.664000
+73,header_dependency_safe,-i,1625.692000
+74,header_dependency_safe,-i,1541.057000
+75,header_dependency_safe,-n,590.184000
+76,header_dependency_safe,-n,587.421000
+77,header_dependency_safe,-n,584.823000
+78,header_dependency_safe,-n,587.023000
+79,header_dependency_safe,-n,590.985000
+80,header_dependency_safe,-d,108.714000
+81,header_dependency_safe,-d,103.937000
+82,header_dependency_safe,-d,103.988000
+83,header_dependency_safe,-d,105.791000
+84,header_dependency_safe,-d,103.641000
+85,header_dependency_safe,-f -i -n -d,53.934000
+86,header_dependency_safe,-f -i -n -d,54.458000
+87,header_dependency_safe,-f -i -n -d,53.472000
+88,header_dependency_safe,-f -i -n -d,54.189000
+89,header_dependency_safe,-f -i -n -d,53.339000
+90,header_dependency_unsafe,,2507.377000
+91,header_dependency_unsafe,,2694.755000
+92,header_dependency_unsafe,,2709.128000
+93,header_dependency_unsafe,,2710.455000
+94,header_dependency_unsafe,,2682.752000
+95,header_dependency_unsafe,-f,2471.734000
+96,header_dependency_unsafe,-f,2501.817000
+97,header_dependency_unsafe,-f,2468.291000
+98,header_dependency_unsafe,-f,2459.852000
+99,header_dependency_unsafe,-f,2469.692000
+100,header_dependency_unsafe,-i,2697.537000
+101,header_dependency_unsafe,-i,2729.213000
+102,header_dependency_unsafe,-i,2741.021000
+103,header_dependency_unsafe,-i,2754.039000
+104,header_dependency_unsafe,-i,2745.182000
+105,header_dependency_unsafe,-n,1351.659000
+106,header_dependency_unsafe,-n,1344.151000
+107,header_dependency_unsafe,-n,1340.823000
+108,header_dependency_unsafe,-n,1359.131000
+109,header_dependency_unsafe,-n,1344.074000
+110,header_dependency_unsafe,-d,101.860000
+111,header_dependency_unsafe,-d,100.963000
+112,header_dependency_unsafe,-d,98.234000
+113,header_dependency_unsafe,-d,99.261000
+114,header_dependency_unsafe,-d,102.335000
+115,header_dependency_unsafe,-f -i -n -d,41.479000
+116,header_dependency_unsafe,-f -i -n -d,40.208000
+117,header_dependency_unsafe,-f -i -n -d,39.667000
+118,header_dependency_unsafe,-f -i -n -d,40.703000
+119,header_dependency_unsafe,-f -i -n -d,41.160000
+120,ipv4_opt_safe,,5288.487000
+121,ipv4_opt_safe,,5311.184000
+122,ipv4_opt_safe,,5302.552000
+123,ipv4_opt_safe,,5274.510000
+124,ipv4_opt_safe,,5329.867000
+125,ipv4_opt_safe,-f,4773.898000
+126,ipv4_opt_safe,-f,4701.532000
+127,ipv4_opt_safe,-f,4711.211000
+128,ipv4_opt_safe,-f,4723.431000
+129,ipv4_opt_safe,-f,4689.264000
+130,ipv4_opt_safe,-i,5191.119000
+131,ipv4_opt_safe,-i,5239.039000
+132,ipv4_opt_safe,-i,5266.515000
+133,ipv4_opt_safe,-i,5259.882000
+134,ipv4_opt_safe,-i,5227.176000
+135,ipv4_opt_safe,-n,2746.482000
+136,ipv4_opt_safe,-n,2734.255000
+137,ipv4_opt_safe,-n,2760.617000
+138,ipv4_opt_safe,-n,2781.873000
+139,ipv4_opt_safe,-n,2749.930000
+140,ipv4_opt_safe,-d,230.065000
+141,ipv4_opt_safe,-d,232.559000
+142,ipv4_opt_safe,-d,223.640000
+143,ipv4_opt_safe,-d,226.012000
+144,ipv4_opt_safe,-d,226.251000
+145,ipv4_opt_safe,-f -i -n -d,126.038000
+146,ipv4_opt_safe,-f -i -n -d,130.477000
+147,ipv4_opt_safe,-f -i -n -d,125.725000
+148,ipv4_opt_safe,-f -i -n -d,129.662000
+149,ipv4_opt_safe,-f -i -n -d,123.663000
+150,ipv4_opt_unsafe,,4095.118000
+151,ipv4_opt_unsafe,,4094.979000
+152,ipv4_opt_unsafe,,4115.392000
+153,ipv4_opt_unsafe,,4108.514000
+154,ipv4_opt_unsafe,,4139.585000
+155,ipv4_opt_unsafe,-f,3559.372000
+156,ipv4_opt_unsafe,-f,3548.883000
+157,ipv4_opt_unsafe,-f,3565.598000
+158,ipv4_opt_unsafe,-f,3545.880000
+159,ipv4_opt_unsafe,-f,3498.440000
+160,ipv4_opt_unsafe,-i,4062.137000
+161,ipv4_opt_unsafe,-i,4032.205000
+162,ipv4_opt_unsafe,-i,4045.662000
+163,ipv4_opt_unsafe,-i,4344.142000
+164,ipv4_opt_unsafe,-i,4607.478000
+165,ipv4_opt_unsafe,-n,2074.309000
+166,ipv4_opt_unsafe,-n,2077.906000
+167,ipv4_opt_unsafe,-n,2104.703000
+168,ipv4_opt_unsafe,-n,2037.788000
+169,ipv4_opt_unsafe,-n,1996.865000
+170,ipv4_opt_unsafe,-d,182.301000
+171,ipv4_opt_unsafe,-d,178.952000
+172,ipv4_opt_unsafe,-d,220.158000
+173,ipv4_opt_unsafe,-d,279.203000
+174,ipv4_opt_unsafe,-d,206.268000
+175,ipv4_opt_unsafe,-f -i -n -d,85.451000
+176,ipv4_opt_unsafe,-f -i -n -d,98.982000
+177,ipv4_opt_unsafe,-f -i -n -d,78.953000
+178,ipv4_opt_unsafe,-f -i -n -d,105.722000
+179,ipv4_opt_unsafe,-f -i -n -d,93.817000
+180,ipv4_ttl_safe,,677.643000
+181,ipv4_ttl_safe,,623.347000
+182,ipv4_ttl_safe,,683.595000
+183,ipv4_ttl_safe,,795.268000
+184,ipv4_ttl_safe,,787.331000
+185,ipv4_ttl_safe,-f,696.615000
+186,ipv4_ttl_safe,-f,689.102000
+187,ipv4_ttl_safe,-f,665.633000
+188,ipv4_ttl_safe,-f,634.883000
+189,ipv4_ttl_safe,-f,614.002000
+190,ipv4_ttl_safe,-i,666.036000
+191,ipv4_ttl_safe,-i,636.202000
+192,ipv4_ttl_safe,-i,639.306000
+193,ipv4_ttl_safe,-i,644.872000
+194,ipv4_ttl_safe,-i,644.888000
+195,ipv4_ttl_safe,-n,659.423000
+196,ipv4_ttl_safe,-n,648.939000
+197,ipv4_ttl_safe,-n,651.050000
+198,ipv4_ttl_safe,-n,679.028000
+199,ipv4_ttl_safe,-n,672.978000
+200,ipv4_ttl_safe,-d,107.886000
+201,ipv4_ttl_safe,-d,98.268000
+202,ipv4_ttl_safe,-d,105.249000
+203,ipv4_ttl_safe,-d,97.023000
+204,ipv4_ttl_safe,-d,93.209000
+205,ipv4_ttl_safe,-f -i -n -d,92.104000
+206,ipv4_ttl_safe,-f -i -n -d,89.468000
+207,ipv4_ttl_safe,-f -i -n -d,93.085000
+208,ipv4_ttl_safe,-f -i -n -d,95.366000
+209,ipv4_ttl_safe,-f -i -n -d,92.514000
+210,ipv4_ttl_unsafe,,889.378000
+211,ipv4_ttl_unsafe,,915.664000
+212,ipv4_ttl_unsafe,,958.125000
+213,ipv4_ttl_unsafe,,906.804000
+214,ipv4_ttl_unsafe,,893.053000
+215,ipv4_ttl_unsafe,-f,763.012000
+216,ipv4_ttl_unsafe,-f,709.726000
+217,ipv4_ttl_unsafe,-f,720.912000
+218,ipv4_ttl_unsafe,-f,740.332000
+219,ipv4_ttl_unsafe,-f,714.560000
+220,ipv4_ttl_unsafe,-i,859.104000
+221,ipv4_ttl_unsafe,-i,882.610000
+222,ipv4_ttl_unsafe,-i,880.080000
+223,ipv4_ttl_unsafe,-i,866.708000
+224,ipv4_ttl_unsafe,-i,831.281000
+225,ipv4_ttl_unsafe,-n,832.242000
+226,ipv4_ttl_unsafe,-n,829.838000
+227,ipv4_ttl_unsafe,-n,832.849000
+228,ipv4_ttl_unsafe,-n,889.107000
+229,ipv4_ttl_unsafe,-n,855.072000
+230,ipv4_ttl_unsafe,-d,67.811000
+231,ipv4_ttl_unsafe,-d,63.598000
+232,ipv4_ttl_unsafe,-d,68.216000
+233,ipv4_ttl_unsafe,-d,66.510000
+234,ipv4_ttl_unsafe,-d,66.337000
+235,ipv4_ttl_unsafe,-f -i -n -d,61.590000
+236,ipv4_ttl_unsafe,-f -i -n -d,60.068000
+237,ipv4_ttl_unsafe,-f -i -n -d,63.525000
+238,ipv4_ttl_unsafe,-f -i -n -d,67.080000
+239,ipv4_ttl_unsafe,-f -i -n -d,67.503000
