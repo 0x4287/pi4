@@ -239,6 +239,31 @@ module HeapTypeOps (P : Prover.S) = struct
   let update_includes_cache (inst : Instance.t) (valid : bool)= 
     includes_cache := Map.set !includes_cache ~key:inst ~data:valid
 
+  let rec invalidate_includes_cache lst =
+    match lst with
+    | [] -> ()
+    | h :: t -> update_includes_cache h false; invalidate_includes_cache t
+  
+  let merge_cache c1 c2 =
+    
+    let rec mc l = 
+      match l with
+      | [] -> ()
+      | (k, v) :: t -> 
+        let rslt = Map.find c2 k in
+        match rslt with
+        | Some (v2) -> 
+          if (v && v2) || (not(v) && not(v2)) then
+            update_includes_cache k v
+          else 
+            ();
+          mc t
+        | _ -> mc t
+    in
+    
+    let lst_1 = Map.to_alist c1 in
+    mc lst_1
+
   let subs_pkt_in_cache v =
     match !pkt_in_chache with
     | Some x -> 
@@ -627,6 +652,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
           let hty_in_else =
             Simplify.fold_refinements (Refinement (x, hty_arg, Neg e))
           in
+          let cache_1 = !includes_cache in
           (* cache rollback to eliminate side effect from if branch *)
           includes_cache := cache_snapshot;
           let tyc1_pkt_in_cache = !pkt_in_chache in
@@ -641,8 +667,10 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
               m "@[<v>Computed type for else-branch:@ %a@]"
                 (Pretty.pp_header_type ctx_else)
                 tyc2);
-          (* cache rollback to avoid entries only valid for one branch *)
-          includes_cache := cache_snapshot;
+          let cache_2 = !includes_cache in
+          (* Merge caches *)
+          clear_includes_cache;
+          merge_cache cache_1 cache_2;
           pkt_in_chache := get_min_or_none tyc1_pkt_in_cache !pkt_in_chache;
           pkt_out_chache := get_min_or_none tyc1_pkt_out_cache !pkt_out_chache;
 
@@ -718,8 +746,9 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
           return (Refinement (y, Top, pred))
       | Reset ->
         Log.debug (fun m -> m "@[<v>Typechecking reset...@]");
-        (* TODO Set all instance to invalid *)
-        clear_includes_cache;
+        
+        invalidate_includes_cache (HeaderTable.to_list header_table);
+
         ( 
           match !pkt_out_chache with
           | Some l -> add_pkt_in_cache l

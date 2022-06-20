@@ -1108,7 +1108,6 @@ let rec simplify_subs hty maxlen : HeapType.t =
           Log.debug (fun m -> m "====== Building substitution map ======");
           let%bind subs_map = 
             match subs with
-            (* TODO: Handle Choice  *)
             | Refinement(_,_,f_subs) -> 
               let%bind split_subs = split_eqn f_subs maxlen in
               Log.debug (fun m -> m "@[Extracting formula %a@]" Pretty.pp_form_raw split_subs);
