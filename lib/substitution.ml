@@ -669,8 +669,36 @@ let split_eqn eqn maxlen =
           ( BvExpr(exp),
             BvExpr(Slice(pkt_p, pkt_hi, pkt_lo))))
   in 
+
+  let rec split_inst_cnct inst cnct hi =
+    match cnct with
+    | Concat((Bv(b) as c_l), (_ as c_r)) -> 
+      let%bind rslt_r = split_inst_cnct inst c_r (hi + BitVector.sizeof b) in
+      Ok( And
+      ( Eq(BvExpr(Slice(inst, hi, hi + BitVector.sizeof b)), BvExpr(c_l)),
+        rslt_r
+      ))
+    | Concat((Slice(_, c_hi, c_lo) as c_l), (_ as c_r)) -> 
+      let%bind rslt_r = split_inst_cnct inst c_r (hi + c_lo - c_hi) in
+      Ok( And
+      ( Eq(BvExpr(Slice(inst, hi, hi + c_lo - c_hi)), BvExpr(c_l)),
+        rslt_r
+      ))
+    | Bv(b) -> 
+      Ok( Eq(BvExpr(Slice(inst, hi, hi + BitVector.sizeof b)), BvExpr(cnct)))
+    | Slice(_, c_hi, c_lo) -> 
+      Ok(Eq(BvExpr(Slice(inst, hi, hi + c_lo - c_hi)), BvExpr(cnct)))
+    | _ -> Error(`InvalidArgumentError "Nothing to split in given instance")
+  in
+
   let rec sce e =
     match e with
+    | Eq
+      ( BvExpr(Slice(Instance(_) as i, hi, _)),
+        BvExpr(Concat(_) as c)
+      ) -> 
+        let%bind rslt = split_inst_cnct i c hi in
+        sce rslt
     | Eq
       ( BvExpr(Slice(Instance(x,i_l), hi , lo)),
         BvExpr(Bv(bv))
