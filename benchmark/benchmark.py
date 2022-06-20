@@ -1,7 +1,7 @@
 import subprocess
 import pandas as pd
 
-rounds = 10
+rounds = 20
 
 clear_line = '                                         '
 programs = [
@@ -9,7 +9,8 @@ programs = [
     'header_dependency',
     'ipv4_opt',
     'ipv4_ttl',
-    # 'roundtripping',
+    'mutual_exclusion_ingress'
+    'roundtripping',
     'vlan_decap'
 ]
 
