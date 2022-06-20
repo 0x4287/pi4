@@ -691,8 +691,50 @@ let split_eqn eqn maxlen =
     | _ -> Error(`InvalidArgumentError "Nothing to split in given instance")
   in
 
+  let rec split_concat cnct=
+  let open Instance in
+    let rec splt v inst (fields : Declaration.field list) hib lob = 
+      match fields with
+      | f :: [] -> 
+        let%bind hi, lo = field_bounds inst f.name in
+        if hi < hib || lo > lob then 
+          Error(`InvalidArgumentError "Nothing to split in given instance")
+        else
+          Ok(Slice(Instance(v,inst), hi, lo))
+      | f :: tail -> 
+        let%bind hi, lo = field_bounds inst f.name in
+        if hi < hib then 
+          splt v inst tail hib lob
+        else
+          begin
+          if lo = lob then
+            Ok(Slice(Instance(v,inst), hi, lo))
+          else
+            let%bind rslt_r = splt v inst tail hib lob in
+            Ok (Concat(Slice(Instance(v,inst), hi, lo), rslt_r))
+          end
+      | _ -> 
+        Error(`InvalidArgumentError "Nothing to split in given instance")
+    in
+
+    match cnct with
+    | Concat(c_l, c_r) ->
+      let%bind rslt_l = split_concat c_l in
+      let%bind rslt_r = split_concat c_r in
+      Ok( Concat(rslt_l, rslt_r))
+    | Slice(Instance(v, i), hi, lo) -> 
+      splt v i i.fields hi lo
+    | _ -> Ok(cnct)
+  in
+
   let rec sce e =
     match e with
+    | Eq
+    ( BvExpr(Packet(_)) as p,
+      BvExpr(Concat(_) as c)
+    ) -> 
+      let%bind rslt = split_concat c in
+      Ok(Eq(p,BvExpr(rslt)))
     | Eq
       ( BvExpr(Slice(Instance(_) as i, hi, _)),
         BvExpr(Concat(_) as c)
