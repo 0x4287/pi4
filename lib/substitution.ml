@@ -397,14 +397,14 @@ let find_or_err map key =
   | Some v -> Ok(v)
   | None -> Error(`NotFoundError "No entry found for given key")
 
-let rec rearange_conjunctions form =
+let rec reorder_cnjunctions form =
   match form with
   | And
     ( And(f_ir, f_il),
       f_l
-    ) -> rearange_conjunctions (And(f_ir, And(f_il, f_l)))
-  | And(f_l, f_r) -> And(rearange_conjunctions f_l, rearange_conjunctions f_r)
-  | Or(f_l, f_r) -> Or(rearange_conjunctions f_l, rearange_conjunctions f_r)
+    ) -> reorder_cnjunctions (And(f_ir, And(f_il, f_l)))
+  | And(f_l, f_r) -> And(reorder_cnjunctions f_l, reorder_cnjunctions f_r)
+  | Or(f_l, f_r) -> Or(reorder_cnjunctions f_l, reorder_cnjunctions f_r)
   | _ -> form
 
 let rec fold_form form = 
@@ -441,7 +441,7 @@ let rec fold_form form =
     | _ -> And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
   in
 
-  let form = rearange_conjunctions form in
+  let form = reorder_cnjunctions form in
 
   match form with
   | Or(f_l, f_r) -> Or(fold_form(f_l), fold_form(f_r))
@@ -493,84 +493,7 @@ let rec fold_form form =
   | And(f_l, f_r) -> And(fold_form f_l, fold_form f_r) 
   | _ -> form  
 
-(* TODO: add BitVec *)
-let fold_eqn eqn = fold_form eqn
-  (* match eqn with
-  | Or(f_l, f_r) -> Or(fold_eqn(f_l), fold_eqn(f_r))
-  | And
-    ( Eq
-      ( BvExpr
-        ( Slice( s_l, hi_l, lo_l) ),
-        BvExpr
-        ( Slice( s_r, hi_r, lo_r) as bv)
-      ) as eq_l,
-      f_r
-    ) -> (
-    let f_r = fold_eqn f_r in
-    match f_r with
-    | Eq
-      ( BvExpr
-        ( Slice( f_s_l, f_hi_l, f_lo_l) ),
-        BvExpr
-        ( Slice( f_s_r, f_hi_r, f_lo_r) as f_bv )
-      ) -> 
-      begin
-      let eq_sl_l = [%compare.equal: Sliceable.t] s_l f_s_l in
-      let eq_sl_r = [%compare.equal: Sliceable.t] s_r f_s_r in
-      let eq_hilo_l = [%compare.equal: var] lo_l f_hi_l in
-      let eq_hilo_r = [%compare.equal: var] lo_r f_hi_r in
-      match eq_sl_l, eq_sl_r, eq_hilo_l, eq_hilo_r with
-      | true, true, true, true -> 
-        Eq
-        ( BvExpr
-          ( Slice ( s_l, hi_l, f_lo_l) ),
-          BvExpr
-          ( Slice ( s_r, hi_r, f_lo_r) )
-        )
-      | true, false, true, _ ->
-        Eq 
-        (
-          BvExpr
-          ( Slice ( s_l, hi_l, f_lo_l) ),
-          BvExpr
-          ( Concat ( bv, f_bv) )
-        )
-      | _ -> 
-        And (eq_l, f_r)
-      end
-    
-    | And
-      ( Eq
-        ( BvExpr
-          ( Slice( f_s_l, f_hi_l, f_lo_l) ),
-          BvExpr
-          ( Slice( f_s_r, f_hi_r, f_lo_r) )
-        ),
-        f_f_r
-      ) -> 
-      if [%compare.equal: Sliceable.t] s_l f_s_l 
-        && [%compare.equal: Sliceable.t] s_r f_s_r 
-        && [%compare.equal: var] lo_l f_hi_l
-        && [%compare.equal: var] lo_r f_hi_r then
-        And
-        ( Eq
-          ( BvExpr
-            ( Slice ( s_l, hi_l, f_lo_l) ),
-            BvExpr
-            ( Slice ( s_r, hi_r, f_lo_r) )
-          ),
-          f_f_r
-        )
-      else
-        And (eq_l, f_r)
-    | _ -> 
-      And (eq_l, f_r)
-    )
-  | And(f_l, f_r) -> And(fold_eqn f_l, fold_eqn f_r) 
-  | _ -> eqn  *)
-
-(* TODO fold concatenations *)
-let clean_eqn form =
+let clean_form form =
   Log.debug(fun m -> m "Called Cleanup");
   let rec cce f = 
     match f with
@@ -601,14 +524,15 @@ let clean_eqn form =
       Or(cce f1, cce f2)
     | _ -> f
     in
-  let clean_from = cce form in
-  let ff = fold_eqn clean_from in
+  let cln_f = cce form in
+  let ff = fold_form cln_f in
+  let ff = Simplify.simplify_form ff in
   Log.debug (fun m -> m "@[Cleaned: %a@]" Pretty.pp_form_raw ff);
   ff
-
 let split_eqn eqn maxlen =
 
-  let eqn = rearange_conjunctions eqn in
+  let eqn = Simplify.simplify_form eqn in
+  let eqn = reorder_cnjunctions eqn in
 
   let rec get_bv bv ln = 
     match bv with
@@ -1115,8 +1039,8 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
   match result with
   | Ok f -> (
     match Map.find m_in FormulaId.Preserve with
-    | Some prsv -> Some (clean_eqn (And(f, prsv)))
-    | None -> Some (clean_eqn f))
+    | Some prsv -> Some (clean_form (And(f, prsv)))
+    | None -> Some (clean_form f))
   | Error(`ContradictionError) -> 
     Log.debug(fun m -> m "Removed branch becuse of a contradiction");
     Some(False)
