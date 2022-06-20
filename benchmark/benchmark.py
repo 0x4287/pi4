@@ -9,7 +9,7 @@ programs = [
     'header_dependency',
     'ipv4_opt',
     'ipv4_ttl',
-    'mutual_exclusion_ingress'
+    'mutual_exclusion_ingress',
     'roundtripping',
     'vlan_decap'
 ]
