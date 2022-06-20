@@ -718,6 +718,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
           return (Refinement (y, Top, pred))
       | Reset ->
         Log.debug (fun m -> m "@[<v>Typechecking reset...@]");
+        (* TODO Set all instance to invalid *)
         clear_includes_cache;
         ( 
           match !pkt_out_chache with
@@ -755,6 +756,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
             Formula.ands
               [ HeaderTable.to_list header_table |> Syntax.inst_equality 0 1;
                 Syntax.packet_equality 0 1 PktIn;
+                IsValid(1, inst);
                 Eq
                   ( BvExpr (Packet (0, PktOut)),
                     BvExpr
@@ -767,6 +769,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
               ]
           in
           add_pkt_out_cache inst_size;
+          Log.debug (fun m -> m "@[<v>%a...@]" Pretty.pp_form_raw  pred);
           return (Refinement (y, Top, pred))
       | Remove inst ->
         let%bind incl = includes header_table ctx hty_arg inst in
@@ -884,7 +887,7 @@ module Make (C : Checker) : S = struct
         Log.debug(fun m -> m "Dynamically setting maxlen to %i" maxlen);
         C.set_maxlen maxlen
       else
-        C.set_maxlen 12000;
+        ();(* C.set_maxlen 12000; *)
       let result =
         let%bind tycout = 
           if len_cache then
@@ -929,6 +932,7 @@ module Make (C : Checker) : S = struct
               (Pretty.pp_header_type ctx)
               (Simplify.fold_refinements tycout));
         let%bind res = C.check_subtype tycout annot_tyout ctx header_table in
+        Log.debug (fun m -> m "%b" res );
         if res then return res
         else
           Error

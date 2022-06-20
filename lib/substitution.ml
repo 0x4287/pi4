@@ -10,17 +10,17 @@ module Log = (val Logs.src_log Logging.substitution_src : Logs.LOG)
 module FormulaId = struct
   module T = struct
     type t =
-      | Valid of int * Instance.t * bool        (* x.τ.valid *)
-      | InstEqual of int * Instance.t           (* x.τ == y.τ *)
-      | ValidEqual of int * Instance.t          (* x.τ.valid == y.τ.valid *)
-      | InstConcat of int * Instance.t
+      | Valid of int * Instance.t * bool        (* x.ι.valid *)
+      | InstEqual of int * Instance.t           (* x.ι == y.ι *)
+      | ValidEqual of int * Instance.t          (* x.ι.valid == y.ι.valid *)
+      | InstConcat of int * Instance.t          (* x.ι == y.exp_bv @ y.exp_bv @ ...*)
       | EqExp of Expression.t                   (* x.exp == y.exp *)
       | GtExp of Expression.t                   (* x.exp > y.exp *)
-      | EqInst of int * Instance.t              (* x.τ == y.exp_bv *)
-      | EqPkt of int * Syntax.packet
-      | EqBvSl of (Sliceable.t * int * int)     (* x.τ[hi:lo] == y.exp_bv *)
-      | EqBv of Expression.t                    (* x.τ == y.bv *)
-      | Preserve
+      | EqInst of int * Instance.t              (* x.ι == y.exp_bv *)
+      | EqPkt of int * Syntax.packet            (* x.p == y.exp_bv *)
+      | EqBvSl of (Sliceable.t * int * int)     (* x.ι/p[hi:lo] == y.exp_bv *)
+      | EqBv of Expression.t                    (* x.ι/p == y.bv *)
+      | Preserve                                (* φ ∧ φ ∧ ... *)
       | Err of string
       [@@deriving compare, sexp] 
   end
@@ -192,38 +192,38 @@ let get_subs_expr exp =
   | None -> exp
 
 (* Replace all occurances if exp_o in exp_i by exp_r *)
-  let replace_expression exp_i exp_o exp_r =
-    let open Expression in
-    if [%compare.equal: Expression.t ] exp_i exp_o then 
-      Ok exp_r
-    
-    else
-    let rec replace_arith exp_i exp_o exp_r : Expression.arith = 
-      let open Expression in
-      if [%compare.equal: Expression.arith ] exp_i exp_o then exp_r
-      else
-      match exp_i with
-      | Plus (a1, a2) -> Plus(replace_arith a1 exp_o exp_r, replace_arith a2 exp_o exp_r)
-      | Length (_)
-      | Num (_) ->  exp_i
-    in
+let replace_expression exp_i exp_o exp_r =
+  let open Expression in
+  if [%compare.equal: Expression.t ] exp_i exp_o then 
+    Ok exp_r
   
-    let rec replace_bv exp_i exp_o exp_r : Expression.bv = 
-      let open Expression in
-      if [%compare.equal: Expression.bv ] exp_i exp_o then exp_r
-      else
-      match exp_i with
-      | Concat (b1, b2) -> Concat(replace_bv b1 exp_o exp_r, replace_bv b2 exp_o exp_r)
-      | Minus (b1, b2) -> Minus(replace_bv b1 exp_o exp_r, replace_bv b2 exp_o exp_r)
-      | Slice (_)
-      | Packet (_)
-      | Bv (_) -> exp_i
-    in
-    
-    match exp_i, exp_o, exp_r with
-    | ArithExpr exp1, ArithExpr exp2, ArithExpr exp3 -> Ok (ArithExpr(replace_arith exp1 exp2 exp3))
-    | BvExpr exp1, BvExpr exp2, BvExpr exp3 -> Ok (BvExpr(replace_bv exp1 exp2 exp3))
-    | _ -> Error(`InvalidArgumentError "All arguments must be of type ArithExpr or BvExpr")
+  else
+  let rec replace_arith exp_i exp_o exp_r : Expression.arith = 
+    let open Expression in
+    if [%compare.equal: Expression.arith ] exp_i exp_o then exp_r
+    else
+    match exp_i with
+    | Plus (a1, a2) -> Plus(replace_arith a1 exp_o exp_r, replace_arith a2 exp_o exp_r)
+    | Length (_)
+    | Num (_) ->  exp_i
+  in
+
+  let rec replace_bv exp_i exp_o exp_r : Expression.bv = 
+    let open Expression in
+    if [%compare.equal: Expression.bv ] exp_i exp_o then exp_r
+    else
+    match exp_i with
+    | Concat (b1, b2) -> Concat(replace_bv b1 exp_o exp_r, replace_bv b2 exp_o exp_r)
+    | Minus (b1, b2) -> Minus(replace_bv b1 exp_o exp_r, replace_bv b2 exp_o exp_r)
+    | Slice (_)
+    | Packet (_)
+    | Bv (_) -> exp_i
+  in
+  
+  match exp_i, exp_o, exp_r with
+  | ArithExpr exp1, ArithExpr exp2, ArithExpr exp3 -> Ok (ArithExpr(replace_arith exp1 exp2 exp3))
+  | BvExpr exp1, BvExpr exp2, BvExpr exp3 -> Ok (BvExpr(replace_bv exp1 exp2 exp3))
+  | _ -> Error(`InvalidArgumentError "All arguments must be of type ArithExpr or BvExpr")
 
 (* Extract terms to a <FormulaId,Formula>Map *)   
 let extract_to_map form : (FormulaId.t, Formula.t , FormulaId.comparator_witness) Map.t=
@@ -262,13 +262,14 @@ let extract_to_map form : (FormulaId.t, Formula.t , FormulaId.comparator_witness
       Log.debug (fun m -> m "@[Nothing to update since %a is no instance@]" Pretty.pp_sliceable_raw i_exp);
       m_in)
   in
-
+  
   let rec ext f m_in : (FormulaId.t, Formula.t , FormulaId.comparator_witness) Core.Map.t =
     let open FormulaId in
     match f with
     | True | False -> m_in
     | And(f1, f2) -> ext f2 (ext f1 m_in)
-      (* x.τ.valid == y.τ.valid *)
+      
+    (* x.ι.valid == y.ι.valid *)
     | Or
       ( And
         ( Neg(IsValid(v1, i1)),
@@ -283,38 +284,39 @@ let extract_to_map form : (FormulaId.t, Formula.t , FormulaId.comparator_witness
       Log.debug (fun m -> m "@[%a: %a@]" pp_fromula_id k Pretty.pp_form_raw  f);
       Map.set m_in ~key:k ~data:f
 
-      (* x.τ == y.τ *)
+    (* x.ι == y.ι *)
     | Or
       ( And
         ( Neg(IsValid(v1, i1)),
           Neg(IsValid(_))),
         And
-        ( And
+        ( IsValid(_),
+          And 
           ( IsValid(_),
-            IsValid(_)),
-          (And
+            (And 
             ( Eq 
               ( BvExpr(Slice(Instance(_), _, _)),
                 BvExpr(_)
-              )
-            ,_ ) as inst_eq)
+              ),
+              _
+            ) as inst_eq)
+          )
         )
       )
-
     | Or
       ( And
         ( Neg(IsValid(v1, i1)),
           Neg(IsValid(_))
         ),
         And
-        ( And
-          ( IsValid(_),
-            IsValid(_)
-          ),
-          (Eq 
-          ( BvExpr(Slice(Instance(_), _, _)),
-            BvExpr(_)
-          ) as inst_eq)
+        ( IsValid(_),
+          And 
+          ( IsValid(_), 
+            (Eq 
+            ( BvExpr(Slice(Instance(_), _, _)),
+              BvExpr(_)
+            ) as inst_eq)
+          )
         )
       ) -> 
       (* let m_in = update_instance m_in i inst_eq in *)
@@ -394,16 +396,113 @@ let find_or_err map key =
   match rslt with
   | Some v -> Ok(v)
   | None -> Error(`NotFoundError "No entry found for given key")
- 
-let rec fold_eqn eqn =
-  match eqn with
+
+let rec rearange_conjunctions form =
+  match form with
+  | And
+    ( And(f_ir, f_il),
+      f_l
+    ) -> rearange_conjunctions (And(f_ir, And(f_il, f_l)))
+  | And(f_l, f_r) -> And(rearange_conjunctions f_l, rearange_conjunctions f_r)
+  | Or(f_l, f_r) -> Or(rearange_conjunctions f_l, rearange_conjunctions f_r)
+  | _ -> form
+
+let rec fold_form form = 
+  let merge_eqn sl sl_f bv bv_f = 
+    Log.debug(fun m -> m "Merging @[%a@] @[%a@] @[%a@] @[%a@]" Pretty.pp_bv_expr_raw(sl) Pretty.pp_bv_expr_raw(sl_f) Pretty.pp_bv_expr_raw(bv) Pretty.pp_bv_expr_raw(bv_f));
+    match  sl, sl_f with
+    | Slice(sl_s, sl_hi_l, sl_lo_l), Slice(sl_f_s, sl_f_hi_l, sl_f_lo_l) -> 
+    begin
+      if [%compare.equal: Sliceable.t] sl_s sl_f_s
+        && [%compare.equal: var] sl_lo_l sl_f_hi_l then begin
+        match bv, bv_f with
+        | Bv b_l, Bv b_r -> 
+          let b_vec = Bv(BitVector.concat b_l b_r) in 
+          Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(b_vec))
+        | Concat _, _
+        | _, Concat _
+        | _, Bv _
+        | Bv _, _ -> Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f)))
+        | Slice(sl_s_r, sl_hi_r, sl_lo_r), Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r) -> 
+          if [%compare.equal: Sliceable.t] sl_s_r sl_f_s_r then
+          begin
+            if [%compare.equal: var] sl_lo_r sl_f_hi_r then
+              Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Slice(sl_s_r, sl_hi_r, sl_f_lo_r)))
+            else
+              Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f)))
+          end
+          else
+            Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f)))
+        | _ -> And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
+      end
+      else
+        And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
+    end
+    | _ -> And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
+  in
+
+  let form = rearange_conjunctions form in
+
+  match form with
+  | Or(f_l, f_r) -> Or(fold_form(f_l), fold_form(f_r))
+  | And
+    ( Eq
+      ( BvExpr
+        ( Slice(_) as sl ),
+        BvExpr
+        ( _ as bv)
+      ),
+      Eq 
+        ( BvExpr
+        ( Slice(_) as sl_f ),
+        BvExpr
+        ( _ as bv_f)
+      )
+    ) -> 
+      merge_eqn sl sl_f bv bv_f
+  | And
+  ( Eq
+    ( BvExpr
+      ( Slice(_) as sl ),
+      BvExpr
+      ( _ as bv)
+    ) as f_l,
+    (And _ as f_and)
+  ) -> 
+    begin
+    let f = fold_form f_and in
+    match f with 
+    | Eq 
+      ( BvExpr
+        ( Slice(_) as sl_f ),
+        BvExpr
+        ( _ as bv_f)
+      ) ->  merge_eqn sl sl_f bv bv_f
+    | And 
+      ( Eq 
+        ( BvExpr
+          ( Slice(_) ),
+          BvExpr
+          ( _ )
+        ) as f_f_l,
+        f_r
+      ) -> 
+        And(fold_form (And(f_l, f_f_l)) ,f_r)
+    | _ -> And(fold_form f_l, f)
+    end
+  | And(f_l, f_r) -> And(fold_form f_l, fold_form f_r) 
+  | _ -> form  
+
+(* TODO: add BitVec *)
+let fold_eqn eqn = fold_form eqn
+  (* match eqn with
   | Or(f_l, f_r) -> Or(fold_eqn(f_l), fold_eqn(f_r))
   | And
     ( Eq
       ( BvExpr
         ( Slice( s_l, hi_l, lo_l) ),
         BvExpr
-        ( Slice( s_r, hi_r, lo_r) )
+        ( Slice( s_r, hi_r, lo_r) as bv)
       ) as eq_l,
       f_r
     ) -> (
@@ -413,20 +512,33 @@ let rec fold_eqn eqn =
       ( BvExpr
         ( Slice( f_s_l, f_hi_l, f_lo_l) ),
         BvExpr
-        ( Slice( f_s_r, f_hi_r, f_lo_r) )
+        ( Slice( f_s_r, f_hi_r, f_lo_r) as f_bv )
       ) -> 
-      if [%compare.equal: Sliceable.t] s_l f_s_l 
-        && [%compare.equal: Sliceable.t] s_r f_s_r 
-        && [%compare.equal: var] lo_l f_hi_l
-        && [%compare.equal: var] lo_r f_hi_r then
-          Eq
-          ( BvExpr
-            ( Slice ( s_l, hi_l, f_lo_l) ),
-            BvExpr
-            ( Slice ( s_r, hi_r, f_lo_r) )
-          )
-        else
-          And (eq_l, f_r)
+      begin
+      let eq_sl_l = [%compare.equal: Sliceable.t] s_l f_s_l in
+      let eq_sl_r = [%compare.equal: Sliceable.t] s_r f_s_r in
+      let eq_hilo_l = [%compare.equal: var] lo_l f_hi_l in
+      let eq_hilo_r = [%compare.equal: var] lo_r f_hi_r in
+      match eq_sl_l, eq_sl_r, eq_hilo_l, eq_hilo_r with
+      | true, true, true, true -> 
+        Eq
+        ( BvExpr
+          ( Slice ( s_l, hi_l, f_lo_l) ),
+          BvExpr
+          ( Slice ( s_r, hi_r, f_lo_r) )
+        )
+      | true, false, true, _ ->
+        Eq 
+        (
+          BvExpr
+          ( Slice ( s_l, hi_l, f_lo_l) ),
+          BvExpr
+          ( Concat ( bv, f_bv) )
+        )
+      | _ -> 
+        And (eq_l, f_r)
+      end
+    
     | And
       ( Eq
         ( BvExpr
@@ -455,8 +567,9 @@ let rec fold_eqn eqn =
       And (eq_l, f_r)
     )
   | And(f_l, f_r) -> And(fold_eqn f_l, fold_eqn f_r) 
-  | _ -> eqn 
+  | _ -> eqn  *)
 
+(* TODO fold concatenations *)
 let clean_eqn form =
   Log.debug(fun m -> m "Called Cleanup");
   let rec cce f = 
@@ -490,10 +603,13 @@ let clean_eqn form =
     in
   let clean_from = cce form in
   let ff = fold_eqn clean_from in
-  Log.debug (fun m -> m "@[Cleande: %a@]" Pretty.pp_form_raw ff);
+  Log.debug (fun m -> m "@[Cleaned: %a@]" Pretty.pp_form_raw ff);
   ff
 
 let split_eqn eqn maxlen =
+
+  let eqn = rearange_conjunctions eqn in
+
   let rec get_bv bv ln = 
     match bv with
     | BitVector.Cons(b, tail) ->  
@@ -812,20 +928,21 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
       | _ -> 
         Log.debug (fun m -> m "@[--> replaced nothing for @ %a @]" Pretty.pp_form_raw form);
         Ok(form))
-      
+    
     | Or
       ( And
         ( Neg(IsValid(_)),
-          Neg(IsValid(_))) as f_l_neg,
+          Neg(IsValid(_))
+        ) as f_l_neg ,
         And
-        ( And
-          ( IsValid(_),
-            IsValid(_)
-          ) as f_l_pos,
-          f_r
+        ( IsValid(_) as val_1,
+          And 
+          ( IsValid(_) as val_2, 
+            ( _ as f_r)
+          ) 
         )
       ) -> (
-      let f_l = Or(f_l_neg, f_l_pos)in
+      let f_l = Or(f_l_neg, And(val_1, val_2)) in
       let smpl_l =  ok_or_default (sf f_l m_in maxlen) f_l in
       let smpl_r = sf f_r m_in maxlen in
       match smpl_l with
@@ -834,7 +951,7 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
         match smpl_r with
         | Ok s -> Ok(And(smpl_l, s))
         | _ -> Ok smpl_l)
-      | _ -> Ok(Or(f_l_neg, And(f_l_pos, ok_or_default smpl_r f_r))))
+      | _ -> Ok(Or(f_l_neg, And( val_1, And (val_2, ok_or_default smpl_r f_r)))))
     
     | Eq(exp1, exp2) -> (
       let subs_id =
@@ -979,7 +1096,7 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
           Log.debug (fun m -> m "@[--> replaced (concat) @ %a @ by@ %a@]" Pretty.pp_bv_expr_raw c Pretty.pp_bv_expr_raw cnct);
           Ok(Eq(exp1, BvExpr(cnct)))
         | _ -> 
-          Log.debug (fun m -> m "@[--> replaced nothing (no ID) @]");
+          Log.debug (fun m -> m "@[--> replaced nothing (no ID): %a @]" Pretty.pp_form_raw (Eq(exp1, exp2)));
           Ok form)
     | _ -> 
       Log.debug (fun m -> m "@[--> replaced nothing (no ID): %a @]" Pretty.pp_form_raw form);
@@ -993,6 +1110,7 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
       shift_slices form hi
     | _ -> form
   in
+
   let result = sf form m_in maxlen in
   match result with
   | Ok f -> (
@@ -1066,7 +1184,7 @@ let rec simplify_subs hty maxlen : HeapType.t =
           Log.debug (fun m -> m "====== Building substitution map ======");
           let%bind subs_map = 
             match subs with
-            (* TODO: Handle Choice *)
+            (* TODO: Handle Choice  *)
             | Refinement(_,_,f_subs) -> 
               let%bind split_subs = split_eqn f_subs maxlen in
               Log.debug (fun m -> m "@[Extracting formula %a@]" Pretty.pp_form_raw split_subs);
