@@ -397,6 +397,12 @@ let find_or_err map key =
   | Some v -> Ok(v)
   | None -> Error(`NotFoundError "No entry found for given key")
 
+let find_or_def map key def =
+  let rslt = Core.Map.find map key in
+  match rslt with
+  | Some v -> v
+  | None -> def
+
 let rec reorder_cnjunctions form =
   match form with
   | And
@@ -769,9 +775,9 @@ let split_eqn eqn maxlen =
 
     | Eq 
       ( BvExpr(Slice(Instance(_,i_l), hi , lo)),
-        BvExpr(Slice(Instance(_,i_r), _,_))
+        BvExpr(Slice(Instance(_,i_r), hi_r,lo_r))
       ) ->
-      if [%compare.equal: Instance.t] i_l i_r then
+      if [%compare.equal: Instance.t] i_l i_r && hi = hi_r && lo = lo_r then
         split_inst i_l hi lo
       else
         Ok(e)
@@ -812,6 +818,12 @@ let shift_slices form n =
   in
   let rec ss f = 
     match f with 
+    | Eq((BvExpr(Slice(Instance(1,_),_,_)) as ex_l), BvExpr(Slice((Packet(1, _) as p_r), hi_r, lo_r))) ->
+      Eq(ex_l, BvExpr(Slice(p_r, hi_r + n, lo_r + n)))
+    | Eq(BvExpr(Slice(Packet(1,_) as p_l, hi_l, lo_l)),(BvExpr(Slice(Instance(1,_),_,_)) as ex_r)) ->
+      Eq(BvExpr(Slice(p_l, hi_l + n, lo_l + n)), ex_r)
+    | Eq(BvExpr(Slice(Packet(1,_) as p_l, hi_l, lo_l)),BvExpr(Slice(Packet(1,_) as p_r, hi_r, lo_r))) ->
+      Eq(BvExpr(Slice(p_l, hi_l + n, lo_l + n)),BvExpr(Slice(p_r, hi_r + n, lo_r + n)))
     | Eq(BvExpr(Concat(Slice(Packet(x, PktIn), hi_l, lo_l), Packet(y,PktIn))), BvExpr(Slice(Packet(z, PktIn),_ , lo_r))) ->
       Eq(BvExpr(Concat(Slice(Packet(x, PktIn), hi_l, lo_l + n), Packet(y,PktIn))), BvExpr(Slice(Packet(z, PktIn), lo_l + n, lo_r)))
     | Eq(BvExpr(Slice(Packet(x, PktIn), hi_l, lo_l)), (BvExpr(Bv(_)) as bv_r)) -> 
@@ -978,6 +990,7 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
         | _ -> None 
       in
       match subs_id, exp2 with
+      (* ERROR? *)
       | Some(InstConcat (_) as k), _ -> (
         Log.debug (fun m -> m "@[Looking for: %a@]" pp_fromula_id k);
         let subs = Core.Map.find m_in k in
@@ -1052,18 +1065,36 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
           Log.debug (fun m -> m "@[exp_old: %a@]" Pretty.pp_expr_raw exp_old);
           let%bind exp_new = replace_expression substitution_l exp_old exp1
           in
-          match exp1, exp2, substitution_r with
+          match exp1, exp2, substitution_r with 
+          | BvExpr(Slice(Instance(1, i), hi, lo)), BvExpr(Slice(Instance(1, _), _, _)), _ -> (
+            let rslt = Core.Map.find m_in (EqBvSl(Instance(0, i), hi, lo)) in
+            match rslt with
+            | Some (Eq(_, e2)) -> 
+              Log.debug (fun m -> m "@[--> replaced (A1) @ %a@ --> @ %a@]" 
+              Pretty.pp_form_raw form
+              Pretty.pp_form_raw (Eq(e2, substitution_r)));
+              Ok(Eq(e2, substitution_r))
+            | _ -> 
+              Log.debug (fun m -> m "@[--> replaced (A2) @ %a@ --> @ %a@]" 
+              Pretty.pp_form_raw form
+              Pretty.pp_form_raw (Eq(exp_new, substitution_r)));
+              Ok (Eq(exp1, substitution_r)))
           | BvExpr(Slice(Instance(1, _),_, _)), _, _ ->
-            Log.debug (fun m -> m "@[--> replaced @ %a @ by@ %a@ in %a@ --> @ %a@]" 
+            Log.debug (fun m -> m "@[--> replaced (B) @ %a @ by@ %a@ in %a@ --> @ %a@]" 
             Pretty.pp_expr_raw exp1
             Pretty.pp_expr_raw substitution_r 
             Pretty.pp_form_raw form
             Pretty.pp_form_raw (Eq(substitution_r, exp2)));
             Ok (Eq(substitution_r, exp2))
           | _, BvExpr(Minus((Slice(_)),bv_r)), BvExpr(bv_subs_r) ->
+            Log.debug (fun m -> m "@[--> replaced (C) @ %a @ by@ %a@ in %a@ --> @ %a@]" 
+            Pretty.pp_expr_raw exp2
+            Pretty.pp_expr_raw (BvExpr(Minus(bv_subs_r, bv_r)))
+            Pretty.pp_form_raw form
+            Pretty.pp_form_raw (Eq(exp_new, BvExpr(Minus(bv_subs_r, bv_r)))));
             Ok(Eq(exp_new, BvExpr(Minus(bv_subs_r, bv_r))))
           | _ -> 
-            Log.debug (fun m -> m "@[--> replaced @ %a @ by@ %a@ in %a@ --> @ %a@]" 
+            Log.debug (fun m -> m "@[--> replaced (D) @ %a @ by@ %a@ in %a@ --> @ %a@]" 
             Pretty.pp_expr_raw exp_old 
             Pretty.pp_expr_raw exp1 
             Pretty.pp_form_raw form
