@@ -425,6 +425,8 @@ let rec fold_form form =
         | Bv b_l, Bv b_r -> 
           let b_vec = Bv(BitVector.concat b_l b_r) in 
           Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(b_vec))
+        | Minus _ , _
+        | _, Minus _
         | Concat _, _
         | _, Concat _
         | _, Bv _
@@ -581,7 +583,7 @@ let split_eqn eqn maxlen =
                 tl
             )
           )
-      | [] -> Error(`InvalidArgumentError "Nothing to split in given instance")
+      | [] -> Error(`InvalidArgumentError "Nothing to split in given instance (split_assing)")
     in 
     splt inst.fields bv
   in
@@ -612,7 +614,7 @@ let split_eqn eqn maxlen =
           let%bind rslt_r = splt tail in
           Ok (And(rslt_l, rslt_r))
 
-      | [] -> Error(`InvalidArgumentError "Nothing to split in given instance")
+      | [] -> Error(`InvalidArgumentError "Nothing to split in given instance (split_inst)")
     in
     splt inst.fields 
   in
@@ -648,7 +650,7 @@ let split_eqn eqn maxlen =
           let%bind rslt_r = splt tail in
           Ok (And(rslt_l, rslt_r))
         
-      | [] -> Error(`InvalidArgumentError "Nothing to split in given instance")
+      | [] -> Error(`InvalidArgumentError "Nothing to split in given instance (split_inst_pkt)")
     in
     let%bind rsplt = splt inst.fields in
     let len = Instance.sizeof inst in
@@ -678,13 +680,19 @@ let split_eqn eqn maxlen =
 
   let rec split_inst_cnct inst cnct hi =
     match cnct with
-    | Concat((Bv(b) as c_l), (_ as c_r)) -> 
+    | Concat((Bv(b) as c_l), c_r) -> 
       let%bind rslt_r = split_inst_cnct inst c_r (hi + BitVector.sizeof b) in
       Ok( And
       ( Eq(BvExpr(Slice(inst, hi, hi + BitVector.sizeof b)), BvExpr(c_l)),
         rslt_r
       ))
-    | Concat((Slice(_, c_hi, c_lo) as c_l), (_ as c_r)) -> 
+    | Concat((Slice(_, c_hi, c_lo) as c_l), c_r) -> 
+      let%bind rslt_r = split_inst_cnct inst c_r (hi + c_lo - c_hi) in
+      Ok( And
+      ( Eq(BvExpr(Slice(inst, hi, hi + c_lo - c_hi)), BvExpr(c_l)),
+        rslt_r
+      ))
+    | Concat((Minus(Slice(_, c_hi, c_lo),_) as c_l), c_r) ->
       let%bind rslt_r = split_inst_cnct inst c_r (hi + c_lo - c_hi) in
       Ok( And
       ( Eq(BvExpr(Slice(inst, hi, hi + c_lo - c_hi)), BvExpr(c_l)),
@@ -692,9 +700,13 @@ let split_eqn eqn maxlen =
       ))
     | Bv(b) -> 
       Ok( Eq(BvExpr(Slice(inst, hi, hi + BitVector.sizeof b)), BvExpr(cnct)))
+    | Minus(Slice(_, c_hi, c_lo),b) ->
+      Ok( Eq(BvExpr(Slice(inst, hi, hi + (c_lo - c_hi))), BvExpr(b)))
     | Slice(_, c_hi, c_lo) -> 
       Ok(Eq(BvExpr(Slice(inst, hi, hi + c_lo - c_hi)), BvExpr(cnct)))
-    | _ -> Error(`InvalidArgumentError "Nothing to split in given instance")
+    | _ -> 
+      Log.debug(fun m -> m "Cnct: %a" Pretty.pp_bv_expr_raw cnct);
+      Error(`InvalidArgumentError "Nothing to split in given instance (split_inst_cnct)")
   in
 
   let rec split_concat cnct=
@@ -704,7 +716,7 @@ let split_eqn eqn maxlen =
       | f :: [] -> 
         let%bind hi, lo = field_bounds inst f.name in
         if hi < hib || lo > lob then 
-          Error(`InvalidArgumentError "Nothing to split in given instance")
+          Error(`InvalidArgumentError "Nothing to split in given instance (split_concat - bounds)")
         else
           Ok(Slice(Instance(v,inst), hi, lo))
       | f :: tail -> 
@@ -720,7 +732,7 @@ let split_eqn eqn maxlen =
             Ok (Concat(Slice(Instance(v,inst), hi, lo), rslt_r))
           end
       | _ -> 
-        Error(`InvalidArgumentError "Nothing to split in given instance")
+        Error(`InvalidArgumentError "Nothing to split in given instance (split_concat)")
     in
 
     match cnct with
