@@ -851,6 +851,7 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
     let open FormulaId in
     let rec smp_concat m_in f_concat =
       match f_concat with
+      | Minus(c_l, c_r) -> Minus((smp_concat m_in c_l),( smp_concat m_in c_r))
       | Concat(c_l, c_r) -> Concat((smp_concat m_in c_l),( smp_concat m_in c_r))
       | Packet(_,PktOut) -> (
         let rslt = Core.Map.find m_in (EqPkt(0, PktOut)) in
