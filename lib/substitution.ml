@@ -325,14 +325,20 @@ let extract_to_map form : (FormulaId.t, Formula.t , FormulaId.comparator_witness
       Log.debug (fun m -> m "@[%a: %a@]" pp_fromula_id k Pretty.pp_form_raw  f);
       Map.set m_in ~key:k ~data:f
 
+    | Neg (Gt (exp1, _) )
     | Gt (exp1, _) -> (
       let subs_exp = get_subs_expr exp1 in
       match subs_exp with
-      | ArithExpr _ ->  
+      | BvExpr(Slice(Packet(1,_),_,_))
+      | BvExpr(Slice(Instance(1,_),_,_)) -> 
         let k = GtExp exp1 in
         Log.debug (fun m -> m "@[%a: %a@]" pp_fromula_id k Pretty.pp_form_raw  f);
-        Map.set m_in ~key:k ~data:f
-      | _ -> m_in)
+        let m_in = Map.set m_in ~key:k ~data:f in 
+        combine_or_create m_in Preserve f
+      | _ ->  
+        let k = GtExp exp1 in
+        Log.debug (fun m -> m "@[%a: %a@]" pp_fromula_id k Pretty.pp_form_raw  f);
+        Map.set m_in ~key:k ~data:f)
 
     | Neg(Eq (exp1, _))
     | Eq (exp1, _) -> (
@@ -1092,6 +1098,8 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
               Pretty.pp_form_raw form
               Pretty.pp_form_raw (Eq(exp_new, substitution_r)));
               Ok (Eq(exp1, substitution_r)))
+          | BvExpr(Slice(Instance(1, _),_, _)), _, BvExpr(Bv _) ->
+            Ok(True)
           | BvExpr(Slice(Instance(1, _),_, _)), _, _ ->
             Log.debug (fun m -> m "@[--> replaced (B) @ %a @ by@ %a@ in %a@ --> @ %a@]" 
             Pretty.pp_expr_raw exp1
