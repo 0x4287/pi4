@@ -1,0 +1,89 @@
+(({y'':
+    ⊤
+    | (((((true ∧
+          (true ∧
+          ((¬(y''.ipv4.valid) ∧
+           ¬(y'.ipv4.valid)) ∨
+          ((y''.ipv4.valid ∧
+           y'.ipv4.valid) ∧
+          y''.ipv4[0:8] == y'.ipv4[0:8])))) ∧
+         (y''.pkt_in.length == y'.pkt_in.length ∧
+         y''.pkt_in == y'.pkt_in)) ∧
+        y'.ipv4.valid) ∧
+       y''.pkt_out == y'.pkt_out@y'.ipv4[0:8]) ∧
+      y''.pkt_out.length == (y'.pkt_out.length + 8))})[y' ↦
+                                                         {y':
+                                                           ⊤
+                                                           | (((((((true ∧
+                                                                   (y'.pkt_in.length == y.pkt_in.length ∧
+                                                                   y'.pkt_in == y.pkt_in)) ∧
+                                                                  (y'.pkt_out.length == y.pkt_out.length ∧
+                                                                  y'.pkt_out == y.pkt_out)) ∧
+                                                                 true) ∧
+                                                                y'.ipv4[0:2] == y.ipv4[0:2]) ∧
+                                                               y'.ipv4[2:6] == (y.ipv4[2:6] - 0b0001)) ∧
+                                                              y'.ipv4[6:8] == y.ipv4[6:8]) ∧
+                                                             ((¬(y'.ipv4.valid) ∧
+                                                              ¬(y.ipv4.valid)) ∨
+                                                             (y'.ipv4.valid ∧
+                                                             y.ipv4.valid)))}])[
+  y ↦
+    {y:
+      ⊤
+      | (((((true ∧
+            y.ipv4.valid) ∧
+           y.ipv4[0:8]@y.pkt_in == x.pkt_in) ∧
+          (y.pkt_in.length + 8) == x.pkt_in.length) ∧
+         true) ∧
+        (y.pkt_out.length == x.pkt_out.length ∧
+        y.pkt_out == x.pkt_out))}]
+
+
+### By hand ###
+
+## 1st Step
+
+{y: ⊤ | 
+    y.ipv4.valid ∧
+    y.ipv4[0:8] == x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    (y.pkt_in.length + 8) == x.pkt_in.length ∧
+    x.pkt_in[0:8]@y.pkt_in == x.pkt_in ∧
+    y.pkt_out.length == x.pkt_out.length ∧
+    y.pkt_out == x.pkt_out
+}
+
+## Result
+
+{y: ⊤ | 
+    y.ipv4.valid ∧
+    y.ipv4[0:8] == x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    (y.pkt_in.length + 8) == x.pkt_in.length ∧
+    x.pkt_in[0:8]@y.pkt_in == x.pkt_in ∧
+    y.pkt_out == x.pkt_out@x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    y.pkt_out.length == (x.pkt_out.length + 8)
+}
+
+### Using Pi4 inlingn ###
+
+## Cleaned
+--> Binary equal to result by hand
+
+{y: ⊤ | 
+    y.ipv4.valid ∧
+    y.ipv4[0:8] == x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    (y.pkt_in.length + 8) == x.pkt_in.length ∧
+    x.pkt_in[0:8]@y.pkt_in == x.pkt_in ∧
+    y.pkt_out == x.pkt_out@x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    y.pkt_out.length == (x.pkt_out.length + 8)
+}
+
+
+## Original
+{y':
+    ⊤
+    | (y'.ipv4.valid ∧
+    (y'.ipv4[0:8] == x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    ((y'.pkt_in.length + 8) == x.pkt_in.length ∧
+    (x.pkt_in[0:8]@y'.pkt_in == x.pkt_in ∧
+    (y'.pkt_out == x.pkt_out@x.pkt_in[0:2]@(x.pkt_in[2:6] - 0b0001)@x.pkt_in[6:8] ∧
+    y'.pkt_out.length == (x.pkt_out.length + 8))))))}
