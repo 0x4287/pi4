@@ -1,0 +1,12 @@
+(x:{y:⊤|
+    y.pkt_out.length == 0 ∧
+    y.pkt_in.length > 432 ∧
+    ¬y.ether.valid ∧
+    ¬y.ipv4.valid ∧
+    ¬y.tcp.valid ∧
+    y.stdmeta.valid ∧
+    y.ecmp_table.valid ∧
+    y.nhop_table.valid ∧
+    y.egress_table.valid ∧
+    y.meta.valid
+    }) -> {y: ⊤ | (y.ipv4.valid ∧ (y.ipv4.proto == 0b00001001)) => y.tcp.valid}

@@ -9,10 +9,10 @@ let to_result ~success result =
 
 let union r =
   match r with
-  | Error _ -> ()
-    (* Printf.sprintf "false" *)
-  | Ok _ -> ()
-    (* Printf.sprintf "true" *)
+  | Error _ -> 
+    Printf.sprintf "false"
+  | Ok _ -> 
+    Printf.sprintf "true"
 
 let time f =
   let time = Time_ns.now () in
@@ -44,7 +44,7 @@ let typecheck program_file type_file dyn_max lenc inclc folds : unit =
   )
   |> to_result ~success:"passed typechecker"
   |> union 
-  (* |> print_endline *)
+  |> print_endline
 
 let command = 
   Command.basic ~summary:"Minimal Pi4 cli for benchmarking"
@@ -61,8 +61,18 @@ let command =
         flag "-i" no_arg ~doc:"Enable includes cache"
       and fold_subs = 
         flag "-f" no_arg ~doc:"Enable substitution folding"
+      and cache_log = 
+        flag "-c" no_arg ~doc:"Enable logging of cache metrics to stdout"
       in
       fun () -> 
+        if cache_log then
+          begin
+          Fmt_tty.setup_std_outputs ();
+          Logs.set_reporter @@ Logs_fmt.reporter ();
+          Logs.set_level @@ Some Logs.Error;
+          Logs.Src.set_level Pi4.Logging.cache_src @@ Some Logs.Debug;
+          end
+        else ();
         typecheck filename typ dynamic_maxlen len_cache incl_cache fold_subs
     )
 

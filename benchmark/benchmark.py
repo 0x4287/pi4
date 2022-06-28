@@ -1,22 +1,25 @@
 import subprocess
 import pandas as pd
 
-rounds = 20
+rounds = 1
 
 clear_line = '                                         '
 programs = [
-    'determined_forwarding',
-    'header_dependency',
-    'ipv4_opt',
-    'ipv4_ttl',
-    'mutual_exclusion_ingress',
-    'roundtripping',
-    'vlan_decap'
+    'tut_basic',
+    'tut_basic_tunnel',
+    'tut_load_balance',
+    # 'determined_forwarding',
+    # 'header_dependency',
+    # 'ipv4_opt',
+    # 'ipv4_ttl',
+    # 'mutual_exclusion_ingress',
+    # 'roundtripping',
+    # 'vlan_decap'
 ]
 
-suffixes = [ 
+suffixes = [
     '_safe',
-     '_unsafe' 
+    '_unsafe'
 ]
 
 flags = [
@@ -24,13 +27,12 @@ flags = [
     ['-f'],
     ['-i'],
     ['-n'],
-    ['-d'],
-    ['-f', '-i', '-n', '-d']
+    ['-f', '-i', '-n']
 ]
 
 out_file = './results.csv'
 
-results = pd.DataFrame({'program' : [], 'flags' : [], 'runtime' : []})
+results = pd.DataFrame({'program': [], 'flags': [], 'runtime': []})
 
 for prog in programs:
     for suf in suffixes:
@@ -38,18 +40,18 @@ for prog in programs:
             for i in range(rounds):
                 print(
                     'Running: ' + prog + suf + ' ' + ' '.join(flag) +
-                    ' [' + str(i+1) +'/' + str(rounds) + ']',
-                    end=clear_line + '\r')
+                    ' [' + str(i + 1) + '/' + str(rounds) + ']')
                 rslt = subprocess.run([
-                    '../_build/default/benchmark/benchmark.exe',
-                    './programs/' + prog + suf + '.pi4',
-                    '-t', './programs/' + prog + suf + '.pi4_type']
-                    + flag,
-                    stdout=subprocess.PIPE,
-                    text=True)
+                                          '../_build/default/benchmark/benchmark.exe',
+                                          './programs/' + prog + suf + '.pi4',
+                                          '-t', './programs/' + prog + suf + '.pi4_type']
+                                      + flag,
+                                      stdout=subprocess.PIPE,
+                                      text=True)
+                print(rslt.stdout.strip())
                 results = results.append(
-                    pd.DataFrame( 
-                        {'program' :[prog + suf], 'flags' : [' '.join(flag)], 'runtime' : [rslt.stdout.strip()]}),
-                    ignore_index=True )
+                    pd.DataFrame(
+                        {'program': [prog + suf], 'flags': [' '.join(flag)], 'runtime': [rslt.stdout.strip()]}),
+                    ignore_index=True)
 
 results.to_csv(out_file)
