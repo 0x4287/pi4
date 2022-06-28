@@ -891,7 +891,7 @@ let test_set =
     test_case "ipv4_opt" `Quick (types_equiv ipv4_opt_str ipv4_opt_hty_str);
     test_case "vlan_decap" `Quick (types_equiv vlan_decap_str vlan_decap_type);
     test_case "determined forwarding" `Quick (types_equiv det_forward_str det_forward_type);
-    test_case "header dependency" `Quick (types_equiv header_dep_str det_forward_type);
+    test_case "header dependency" `Quick (types_equiv header_dep_str header_dep_type);
     test_case "tut basic" `Quick (types_equiv tut_basic_str tut_basic_hty);
     test_case "tut basic tunnel" `Quick (types_equiv tut_basic_tunnel_str tut_basic_tunnel_hty);
     test_case "tut ecn" `Quick (types_equiv tut_ecn_str tut_ecn_hty);
