@@ -1,7 +1,7 @@
 import subprocess
 import pandas as pd
 
-rounds = 1
+rounds = 10
 
 clear_line = '                                         '
 programs = [

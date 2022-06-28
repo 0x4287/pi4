@@ -9,10 +9,10 @@ let to_result ~success result =
 
 let union r =
   match r with
-  | Error _ -> 
-    Printf.sprintf "false"
-  | Ok _ -> 
-    Printf.sprintf "true"
+  | Error _ -> ()
+    (* Printf.sprintf "false" *)
+  | Ok _ -> () 
+    (* Printf.sprintf "true" *)
 
 let time f =
   let time = Time_ns.now () in
@@ -44,7 +44,7 @@ let typecheck program_file type_file dyn_max lenc inclc folds : unit =
   )
   |> to_result ~success:"passed typechecker"
   |> union 
-  |> print_endline
+  (* |> print_endline *)
 
 let command = 
   Command.basic ~summary:"Minimal Pi4 cli for benchmarking"
