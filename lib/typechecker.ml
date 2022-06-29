@@ -185,6 +185,8 @@ module type Checker = sig
   val set_maxlen :
     var -> unit
 
+  val reset_cache :
+  unit -> unit
   val compute_type :
     Command.t ->
     ?smpl_subs:bool ->
@@ -234,10 +236,12 @@ module HeapTypeOps (P : Prover.S) = struct
     includes_cache := Map.empty(module Instance)
     
   let clear_caches = 
+    Log.debug(fun m -> m "Cleared caches");
     clear_len_caches;
     clear_includes_cache
 
   let update_includes_cache (inst : Instance.t) (valid : bool)= 
+    Log.debug(fun m -> m "Updated include_cache: %a %b" Pretty.pp_instance inst valid );
     includes_cache := Map.set !includes_cache ~key:inst ~data:valid
 
   let rec invalidate_includes_cache lst =
@@ -246,7 +250,7 @@ module HeapTypeOps (P : Prover.S) = struct
     | h :: t -> update_includes_cache h false; invalidate_includes_cache t
   
   let merge_cache c1 c2 =
-    
+    Log.debug(fun m -> m "Mergingn includes caches");
     let rec mc l = 
       match l with
       | [] -> ()
@@ -489,6 +493,9 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
   module P = Prover.Make (Encoding.FixedWidthBitvectorEncoding (C))
   module FC = FormChecker (P)
   include HeapTypeOps (P)
+
+  let reset_cache () =
+   clear_caches
 
   let set_maxlen len =
     P.set_maxlen len
@@ -899,11 +906,18 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
               hty_subst);
         Log.debug (fun m ->
             m "Context for substitution type:@ %a" Pretty.pp_context ctx');
+
         if smpl_subs then
-          let hty_subst = Substitution.simplify hty_subst !C.maxlen in
-          return hty_subst
+          match c1, c2 with
+          | Ascription _ , _
+          | _, Ascription _ -> return hty_subst
+          | _ ->
+            let hty_subst = Substitution.simplify hty_subst !C.maxlen in
+            return hty_subst
         else 
           return hty_subst
+
+
       | Skip ->
         Log.debug (fun m -> m "@[<v>Typechecking skip...@]");
         Log.debug (fun m ->
@@ -945,6 +959,7 @@ module Make (C : Checker) : S = struct
     (header_table : HeaderTable.t) =
     match ty with
     | Pi (x, annot_tyin, annot_tyout) -> (
+      C.reset_cache ();
       if dynamic_maxlen then
         let maxlen = HeaderTable.max_header_size header_table + 1 in
         Log.debug(fun m -> m "Dynamically setting maxlen to %i" maxlen);
