@@ -3,7 +3,7 @@ open Pi4
 open Syntax
 
 module Config = struct
-  let maxlen = ref(12000)
+  let maxlen = ref(280)
 end
 
 module P = Prover.Make (Encoding.FixedWidthBitvectorEncoding (Config))
@@ -216,6 +216,105 @@ let vlan_decap_hty_str_cplx =
     x.pkt_in.length > 304
   }
   |}
+
+let tut_basic_safe = 
+  {|
+header_type ether_t {
+  dst: 48;
+  src: 48;
+  type: 16;
+}
+header_type ipv4_t {
+  version: 4;
+  ihl: 4;
+  tos: 8;
+  len: 16;
+  id: 16;
+  flags: 3;
+  frag: 13;
+  ttl: 8;
+  proto: 8;
+  chksum: 16;
+  src: 32;
+  dst: 32;
+}
+header_type standard_metadata_t {
+  ingress_port: 9;
+  egress_spec: 9;
+  egress_port: 9;
+  instance_type: 32;
+  packet_length: 32;
+  enq_timestamp: 32;
+  enq_qdepth: 19;
+  deq_timedelta: 32;
+  deq_qdepth: 19;
+  ingress_global_timestamp: 48;
+  mcast_grp: 16;
+  egress_rid: 16;
+  checksum_error: 1;
+  priority: 3;
+  drop: 1;
+}
+header_type forward_table_t {
+  ipv4_dst_key: 32;
+  act_ipv4_forward: 1;
+  dst: 48;
+  port: 9;
+  ttl: 8;
+}
+
+header ether : ether_t
+header ipv4 : ipv4_t
+header stdmeta : standard_metadata_t
+header forward_table : forward_table_t
+
+extract(ether);
+if(ether.type == 0x0800) {
+  extract(ipv4)
+};
+
+if(ipv4.valid) {
+  if(ipv4.dst == forward_table.ipv4_dst_key) {
+    if(forward_table.act_ipv4_forward == 0b1) {
+      stdmeta.egress_spec := forward_table.port;
+      ether.src := ether.dst;
+      ether.dst := forward_table.dst;
+      ipv4.ttl := forward_table.ttl
+    } else {
+      stdmeta.drop := 0b1;
+      stdmeta.mcast_grp := 0x0000
+    }
+  } else {
+    stdmeta.drop := 0b1;
+    stdmeta.mcast_grp := 0x0000
+  }
+};
+
+if(stdmeta.drop != 0b1) {
+  if(ether.valid){
+    remit(ether)
+  };
+  if(ipv4.valid) {
+    remit(ipv4)
+  }
+}
+
+|}
+
+
+let tut_basic_hty = 
+  {|
+  (x:{y:⊤|
+      y.pkt_out.length == 0 ∧
+      !y.ether.valid ∧
+      !y.ipv4.valid ∧
+      y.pkt_in.length > 272 ∧
+      y.stdmeta.valid ∧
+      y.forward_table.valid
+      }) -> {y:⊤ | (y.stdmeta.drop == 0b1) => (y.pkt_out.length == 0)}
+  |}
+
+
   let test str t_str smpl_subs incl_c len_c dyn_len () =
   let program = Parsing.parse_program str in
   Logs.debug (fun m -> m "%a" Pretty.pp_command program.command);
@@ -250,7 +349,7 @@ let test_set =
       `Quick (test ipv4_ttl_str ipv4_ttl_hty_str false false false true);
     test_case "IPv4 ttl Optimized" 
       `Quick (test ipv4_ttl_str ipv4_ttl_hty_str true true true true);
-      test_case "VLAN decap Unoptimized" 
+    test_case "VLAN decap Unoptimized" 
       `Quick (test vlan_decap_str vlan_decap_hty_str false false false false);
     test_case "VLAN decap +subs_folding" 
       `Quick (test vlan_decap_str vlan_decap_hty_str true false false false);
@@ -262,4 +361,14 @@ let test_set =
       `Quick (test vlan_decap_str vlan_decap_hty_str false false false true);
     test_case "VLAN decap Optimized" 
       `Quick (test vlan_decap_str vlan_decap_hty_str true true true true);
+    test_case "tut_basic" 
+      `Quick (test tut_basic_safe tut_basic_hty false false false false);
+    test_case "tut_basic +fold" 
+      `Quick (test tut_basic_safe tut_basic_hty true false false false);
+    test_case "tut_basic +inst_cache" 
+      `Quick (test tut_basic_safe tut_basic_hty false true false false);
+    test_case "tut_basic +len_cache" 
+      `Quick (test tut_basic_safe tut_basic_hty false false true false);
+    test_case "tut_basic optimized" 
+      `Quick (test tut_basic_safe tut_basic_hty true true true false);
   ]
