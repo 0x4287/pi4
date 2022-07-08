@@ -157,6 +157,9 @@ let fold hty =
       in
     fr hty []
   in
+
+
+  Log.debug(fun m -> m "Folding: %a" Pretty.pp_header_type_raw hty );
   fold_double_negation (fold_refinement hty)
 
 (* Get expression substitution *)
@@ -458,6 +461,8 @@ let rec fold_form form =
   let form = reorder_cnjunctions form in
 
   match form with
+  | And(f, True) 
+  | And(True, f) -> fold_form f
   | Or(f_l, f_r) -> Or(fold_form(f_l), fold_form(f_r))
   | And
     ( Eq
@@ -1009,7 +1014,6 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
         | _ -> None 
       in
       match subs_id, exp2 with
-      (* ERROR? *)
       | Some(InstConcat (_) as k), _ -> (
         Log.debug (fun m -> m "@[Looking for: %a@]" pp_fromula_id k);
         let subs = Core.Map.find m_in k in
@@ -1168,6 +1172,32 @@ let simplify_formula form (m_in: (FormulaId.t, Formula.t, FormulaId.comparator_w
     Some(False)
   | _ -> None
 
+let clean_choices hty =
+  let rec cc ht = 
+  match ht with 
+    | Choice(Refinement(_,_,False), Refinement(_,_,False)) -> None
+    | Choice(Refinement(_,_,False), ch)
+    | Choice(ch, Refinement(_,_,False)) -> (
+      let rslt = cc ch in
+      match rslt with
+      | None -> None
+      | _ -> rslt)
+    | Choice(ch_l, ch_r) ->(
+      let rslt_l = cc ch_l in
+      let rslt_r = cc ch_r in
+      match rslt_l, rslt_r with
+      | None, None -> None
+      | Some _, None -> rslt_l
+      | None, Some _ -> rslt_r
+      | Some l, Some r -> Some (Choice(l,r)))
+    | Refinement(_,_,False) -> None
+    | Refinement(x, t, f) -> Some (Refinement(x, t, fold_form f))
+    | _ -> Some(ht)
+  in
+  let result = cc hty in
+  match result with
+  | Some h -> h
+  | None -> Refinement("y", Top, False)
 
 let rec simplify_subs hty maxlen : HeapType.t =
   Log.debug (fun m -> m "====== Simplifiying: %a" Pretty.pp_header_type_raw hty);
@@ -1336,6 +1366,7 @@ let rec simplify_subs hty maxlen : HeapType.t =
   in
   match result with
   | Ok ht -> 
+    let ht = clean_choices ht in
     Log.debug (fun m -> m "@[Simplfied %a@]" Pretty.pp_header_type_raw hty);
     Log.debug (fun m -> m "@[Resulting hty %a@]" Pretty.pp_header_type_raw ht);
     ht
