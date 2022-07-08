@@ -424,7 +424,7 @@ let rec reorder_cnjunctions form =
 
 let rec fold_form form = 
   let merge_eqn sl sl_f bv bv_f = 
-    Log.debug(fun m -> m "Merging @[%a@] @[%a@] @[%a@] @[%a@]" Pretty.pp_bv_expr_raw(sl) Pretty.pp_bv_expr_raw(sl_f) Pretty.pp_bv_expr_raw(bv) Pretty.pp_bv_expr_raw(bv_f));
+    Log.debug(fun m -> m "Merging: @[%a@] @[%a@] @[%a@] @[%a@]" Pretty.pp_bv_expr_raw(sl) Pretty.pp_bv_expr_raw(sl_f) Pretty.pp_bv_expr_raw(bv) Pretty.pp_bv_expr_raw(bv_f));
     match  sl, sl_f with
     | Slice(sl_s, sl_hi_l, sl_lo_l), Slice(sl_f_s, sl_f_hi_l, sl_f_lo_l) -> 
     begin
@@ -433,29 +433,64 @@ let rec fold_form form =
         match bv, bv_f with
         | Bv b_l, Bv b_r -> 
           let b_vec = Bv(BitVector.concat b_l b_r) in 
-          Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(b_vec))
+          let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(b_vec)) in
+          Log.debug(fun m -> m "=> A @[%a@]" Pretty.pp_form_raw rslt);
+          rslt
+        | Slice(sl_s_r, sl_hi_r, sl_lo_r), Concat(Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r), r) ->
+          if [%compare.equal: Sliceable.t] sl_s_r sl_f_s_r then
+            begin
+              if [%compare.equal: var] sl_lo_r sl_f_hi_r then
+                let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(Slice(sl_s_r, sl_hi_r, sl_f_lo_r), r))) in
+                Log.debug(fun m -> m "=> B @[%a@]" Pretty.pp_form_raw rslt);
+                rslt
+              else
+                let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in 
+                Log.debug(fun m -> m "=> C @[%a@]" Pretty.pp_form_raw rslt);
+                rslt
+            end
+            else
+              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
+              Log.debug(fun m -> m "=> D @[%a@]" Pretty.pp_form_raw rslt);
+              rslt
+        | Slice(sl_s_r, sl_hi_r, sl_lo_r), Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r) -> 
+          if [%compare.equal: Sliceable.t] sl_s_r sl_f_s_r then
+          begin
+            if [%compare.equal: var] sl_lo_r sl_f_hi_r then
+              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Slice(sl_s_r, sl_hi_r, sl_f_lo_r))) in
+              Log.debug(fun m -> m "=> E @[%a@]" Pretty.pp_form_raw rslt);
+              rslt
+            else
+              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in 
+              Log.debug(fun m -> m "=> F @[%a@]" Pretty.pp_form_raw rslt);
+              rslt
+          end
+          else
+            let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
+            Log.debug(fun m -> m "=> G @[%a@]" Pretty.pp_form_raw rslt);
+            rslt
         | Minus _ , _
         | _, Minus _
         | Concat _, _
         | _, Concat _
         | _, Bv _
-        | Bv _, _ -> Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f)))
-        | Slice(sl_s_r, sl_hi_r, sl_lo_r), Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r) -> 
-          if [%compare.equal: Sliceable.t] sl_s_r sl_f_s_r then
-          begin
-            if [%compare.equal: var] sl_lo_r sl_f_hi_r then
-              Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Slice(sl_s_r, sl_hi_r, sl_f_lo_r)))
-            else
-              Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f)))
-          end
-          else
-            Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f)))
-        | _ -> And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
+        | Bv _, _ -> 
+          let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
+          Log.debug(fun m -> m "=> H @[%a@]" Pretty.pp_form_raw rslt);
+          rslt
+        | _ -> 
+          let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+          Log.debug(fun m -> m "=> I @[%a@]" Pretty.pp_form_raw rslt);
+          rslt
       end
       else
-        And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
+        let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+        Log.debug(fun m -> m "=> J @[%a@]" Pretty.pp_form_raw rslt);
+        rslt
     end
-    | _ -> And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f)))
+    | _ -> 
+      let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+      Log.debug(fun m -> m "=> K @[%a@]" Pretty.pp_form_raw rslt);
+      rslt
   in
 
   let form = reorder_cnjunctions form in
