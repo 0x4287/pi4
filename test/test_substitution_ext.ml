@@ -33,7 +33,8 @@ let types_equiv program_str type_str ()=
       let ctx = [ (x, Env.VarBind annot_tyin) ] in
       Log.info(fun m -> m "SMPL RAW: %a" Pretty.pp_header_type_raw smpl);
       Test.is_equiv ht smpl ctx header_table
-    | _ -> ()
+    | _, Ok _  -> Alcotest.(check bool) "Failed type computation" false true
+    | _ -> Alcotest.(check bool) "Failed type computation for inlined type" false true
 
 
 let ipv4_ttl_hty_str = 
@@ -209,9 +210,9 @@ let safe_roundtrip_type_string =
               |}
 
 
-let vlan_decap_str = 
-  (* {|
-    header_type ether_t {
+let asc_roundtrip_str = 
+  {|
+      header_type ether_t {
       dstAddr: 48;
       srcAddr: 48;
       etherType: 16;
@@ -236,28 +237,64 @@ let vlan_decap_str =
       vlan: 12; 
       etherType: 16;
     }
-    header_type forward_table_t {
-      ipv4_dst_key: 32;
-      act: 1;
-      data_eth_src: 48;
-      data_eth_dst: 48;
-    }
     header ether : ether_t
     header ipv4 : ipv4_t
     header vlan : vlan_t
-    header forward_table : forward_table_t
 
     extract(ether);
-    extract(ipv4);
-    if(forward_table.act == 0b1) {
-      ether.srcAddr := forward_table.data_eth_src;
-      ipv4.ttl := ipv4.ttl - 0x01
+    if(ether.etherType == 0x8100) {
+      extract(vlan);
+      if(vlan.etherType == 0x0800) {
+        extract(ipv4)
+      }
+    } else {
+      if(ether.etherType == 0x0800) {
+        extract(ipv4)
+      }
+    };
+    if(!vlan.valid) {
+      add(vlan);
+      ether.etherType := 0x8100;
+      if(ipv4.valid) {
+        vlan.etherType := 0x0800
+      }
+    };
+    ((if(ether.valid) {
+      remit(ether)
     };
     if(vlan.valid) {
-      remove(vlan)
-    }    
-    |} *)
+      remit(vlan)
+    };
+    if(ipv4.valid) {
+      remit(ipv4)
+    };
+    reset;
+    extract(ether);
+    if(ether.etherType == 0x8100) {
+      extract(vlan);
+      if(vlan.etherType == 0x0800) {
+        extract(ipv4)
+      }
+    } else {
+      if(ether.etherType == 0x0800) {
+        extract(ipv4)
+      }
+    }) as (x :  
+          {z:ether~| 
+                z.ether.etherType == 0x8100 && 
+                z.vlan.valid && 
+                (z.ipv4.valid => z.vlan.etherType == 0x0800) && 
+                ((!z.ipv4.valid) => z.vlan.etherType != 0x0800) && 
+                z.pkt_out.length == 0 && 
+                z.pkt_in.length > 0}
+    ) -> {y:⊤| x =i= y })
 
+  |}
+
+let asc_roundtrip_hty = 
+  {|(x:{y:ε|y.pkt_out.length == 0 && y.pkt_in.length > 304}) -> ⊤|}
+
+let vlan_decap_str = 
 
     {|
       header_type ether_t {
@@ -443,6 +480,7 @@ header_type forward_table_t {
   act_ipv4_forward: 1;
   dst: 48;
   port: 9;
+  ttl: 8;
 }
 
 header ether : ether_t
@@ -461,7 +499,7 @@ if(ipv4.valid) {
       stdmeta.egress_spec := forward_table.port;
       ether.src := ether.dst;
       ether.dst := forward_table.dst;
-      ipv4.ttl := 0b00010000
+      ipv4.ttl := ipv4.ttl - 0bx01
     } else {
       stdmeta.drop := 0b1;
       stdmeta.mcast_grp := 0x0000
@@ -487,10 +525,12 @@ let tut_basic_hty =
 {|
 (x:{y:⊤|
     y.pkt_out.length == 0 ∧
+    !y.ether.valid ∧
+    !y.ipv4.valid ∧
     y.pkt_in.length > 272 ∧
     y.stdmeta.valid ∧
     y.forward_table.valid
-    }) -> ⊤
+    }) -> {y:⊤ | (y.stdmeta.drop == 0b1) => (y.pkt_out.length == 0)}
 |}
 
 let tut_basic_tunnel_str =
@@ -569,7 +609,7 @@ if(ipv4.valid) {
             stdmeta.egress_spec := forward_table.port;
             ether.src := ether.dst;
             ether.dst := forward_table.dst;
-            ipv4.ttl := 0b00010000
+            ipv4.ttl := ipv4.ttl - 0b00000001
           } else {
             stdmeta.drop := 0b1;
             stdmeta.mcast_grp := 0x0000
@@ -668,6 +708,7 @@ header_type forward_table_t {
   act_ipv4_forward: 1;
   dst: 48;
   port: 9;
+  ttl: 8;
 }
 
 header ether : ether_t
@@ -686,7 +727,7 @@ if(ipv4.valid) {
       stdmeta.egress_spec := forward_table.port;
       ether.src := ether.dst;
       ether.dst := forward_table.dst;
-      ipv4.ttl := 0b00010000
+      ipv4.ttl := forward_table.ttl
     } else {
       stdmeta.drop := 0b1;
       stdmeta.mcast_grp := 0x0000
@@ -713,6 +754,8 @@ if(stdmeta.drop != 0b1) {
     remit(ipv4)
   }
 }
+
+
 
   
   |}
@@ -888,6 +931,7 @@ let test_set =
     test_case "ipv4_ttl" `Quick (types_equiv ipv4_ttl_str ipv4_ttl_hty_str);
     test_case "mod_router_table" `Quick (types_equiv mod_router_table_str mod_router_table_hty_str);
     test_case "roundtrip" `Quick (types_equiv safe_roundtrip_string safe_roundtrip_type_string);
+    test_case "asc_roundtrip" `Quick (types_equiv asc_roundtrip_str asc_roundtrip_hty);
     test_case "ipv4_opt" `Quick (types_equiv ipv4_opt_str ipv4_opt_hty_str);
     test_case "vlan_decap" `Quick (types_equiv vlan_decap_str vlan_decap_type);
     test_case "determined forwarding" `Quick (types_equiv det_forward_str det_forward_type);
