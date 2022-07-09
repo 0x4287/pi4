@@ -431,11 +431,11 @@ let rec fold_form form =
       if [%compare.equal: Sliceable.t] sl_s sl_f_s
         && [%compare.equal: var] sl_lo_l sl_f_hi_l then begin
         match bv, bv_f with
-        | Bv b_l, Bv b_r -> 
+        (* | Bv b_l, Bv b_r -> 
           let b_vec = Bv(BitVector.concat b_l b_r) in 
           let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(b_vec)) in
           Log.debug(fun m -> m "=> A @[%a@]" Pretty.pp_form_raw rslt);
-          rslt
+          rslt *)
         | Slice(sl_s_r, sl_hi_r, sl_lo_r), Concat(Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r), r) ->
           if [%compare.equal: Sliceable.t] sl_s_r sl_f_s_r then
             begin
@@ -444,12 +444,14 @@ let rec fold_form form =
                 Log.debug(fun m -> m "=> B @[%a@]" Pretty.pp_form_raw rslt);
                 rslt
               else
-                let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in 
+                let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+                (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in  *)
                 Log.debug(fun m -> m "=> C @[%a@]" Pretty.pp_form_raw rslt);
                 rslt
             end
             else
-              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
+              (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in *)
+              let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
               Log.debug(fun m -> m "=> D @[%a@]" Pretty.pp_form_raw rslt);
               rslt
         | Slice(sl_s_r, sl_hi_r, sl_lo_r), Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r) -> 
@@ -460,15 +462,17 @@ let rec fold_form form =
               Log.debug(fun m -> m "=> E @[%a@]" Pretty.pp_form_raw rslt);
               rslt
             else
-              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in 
+              (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in  *)
+              let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
               Log.debug(fun m -> m "=> F @[%a@]" Pretty.pp_form_raw rslt);
               rslt
           end
           else
-            let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
+            (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in *)
+            let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
             Log.debug(fun m -> m "=> G @[%a@]" Pretty.pp_form_raw rslt);
             rslt
-        | Minus _ , _
+        (* | Minus _ , _
         | _, Minus _
         | Concat _, _
         | _, Concat _
@@ -476,7 +480,7 @@ let rec fold_form form =
         | Bv _, _ -> 
           let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
           Log.debug(fun m -> m "=> H @[%a@]" Pretty.pp_form_raw rslt);
-          rslt
+          rslt *)
         | _ -> 
           let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
           Log.debug(fun m -> m "=> I @[%a@]" Pretty.pp_form_raw rslt);
