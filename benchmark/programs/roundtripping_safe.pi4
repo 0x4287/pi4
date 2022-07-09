@@ -74,4 +74,4 @@ if(ether.etherType == 0x8100) {
             ((!z.ipv4.valid) => z.vlan.etherType != 0x0800) && 
             z.pkt_out.length == 0 && 
             z.pkt_in.length > 0}
-) -> {y:⊤| x === y })
+) -> {y:⊤| x =i= y })
