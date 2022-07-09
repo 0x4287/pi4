@@ -1,20 +1,21 @@
 import subprocess
 import pandas as pd
+import re
 
-rounds = 10
+rounds = 20
 
 clear_line = '                                         '
 programs = [
     'tut_basic',
     'tut_basic_tunnel',
     'tut_load_balance',
-    # 'determined_forwarding',
-    # 'header_dependency',
-    # 'ipv4_opt',
-    # 'ipv4_ttl',
-    # 'mutual_exclusion_ingress',
-    # 'roundtripping',
-    # 'vlan_decap'
+    'determined_forwarding',
+    'header_dependency',
+    'ipv4_opt',
+    'ipv4_ttl',
+    'mutual_exclusion_ingress',
+    'roundtripping',
+    'vlan_decap'
 ]
 
 suffixes = [
@@ -34,6 +35,9 @@ out_file = './results.csv'
 
 results = pd.DataFrame({'program': [], 'flags': [], 'runtime': []})
 
+regex_time = r'[0-9]*.[0-9*]'
+regex_rslt = r'true|false'
+
 for prog in programs:
     for suf in suffixes:
         for flag in flags:
@@ -48,10 +52,19 @@ for prog in programs:
                                       + flag,
                                       stdout=subprocess.PIPE,
                                       text=True)
-                print(rslt.stdout.strip())
+
+                time = re.findall(regex_time, rslt.stdout.strip(), re.MULTILINE)[0]
+                result = re.findall(regex_rslt, rslt.stdout.strip(), re.MULTILINE)[0]
+                print(result + ' in ' + time + ' ms')
+                if((suf == '_safe' and result != 'true') or (suf == '_unsafe' and result != 'false') ):
+                    results = results.append(
+                        pd.DataFrame(
+                            {'program': [prog + suf], 'flags': [' '.join(flag)], 'runtime': ['Err']}),
+                        ignore_index=True)
+                    break
                 results = results.append(
                     pd.DataFrame(
-                        {'program': [prog + suf], 'flags': [' '.join(flag)], 'runtime': [rslt.stdout.strip()]}),
+                        {'program': [prog + suf], 'flags': [' '.join(flag)], 'runtime': [time]}),
                     ignore_index=True)
 
 results.to_csv(out_file)
