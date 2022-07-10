@@ -72,7 +72,7 @@ if(ipv4.valid) {
             stdmeta.egress_spec := forward_table.port;
             ether.src := ether.dst;
             ether.dst := forward_table.dst;
-            ipv4.ttl := 0b00010000
+            ipv4.ttl := ipv4.ttl - 0x01
           } else {
             stdmeta.drop := 0b1;
             stdmeta.mcast_grp := 0x0000

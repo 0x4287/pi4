@@ -59,7 +59,6 @@ header_type nhop_table_t {
   nhop_dmac: 48;
   nhop_ipv4: 32;
   port: 9;
-  ttl: 8;
 }
 header_type egress_table_t{
   port_key: 9;
@@ -102,7 +101,7 @@ if(ipv4.valid) {
       ether.dst := nhop_table.nhop_dmac;
       ipv4.dst := nhop_table.nhop_ipv4;
       stdmeta.egress_spec := nhop_table.port;
-      ipv4.ttl := nhop_table.ttl
+      ipv4.ttl := ipv4.ttl - 0x01
     } else {
       stdmeta.drop := 0b1;
       stdmeta.mcast_grp := 0x0000
