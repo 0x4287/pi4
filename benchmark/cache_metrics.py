@@ -5,15 +5,15 @@ import pandas as pd
 clear_line = '                                         '
 programs = [
     'tut_basic',
-    'tut_basic_tunnel',
+    'tut_tunnel',
     'tut_load_balance',
-    # 'determined_forwarding',
-    # 'header_dependency',
-    # 'ipv4_opt',
-    # 'ipv4_ttl',
-    # 'mutual_exclusion_ingress',
-    # 'roundtripping',
-    # 'vlan_decap'
+    'determined_forwarding',
+    'header_dependency',
+    'ipv4_opt',
+    'ipv4_ttl',
+    'mutual_exclusion_ingress',
+    'roundtripping',
+    'vlan_decap'
 ]
 
 suffixes = [

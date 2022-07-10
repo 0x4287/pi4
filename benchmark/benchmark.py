@@ -2,12 +2,12 @@ import subprocess
 import pandas as pd
 import re
 
-rounds = 20
+runs_pp = 20
 
 clear_line = '                                         '
 programs = [
     'tut_basic',
-    'tut_basic_tunnel',
+    'tut_tunnel',
     'tut_load_balance',
     'determined_forwarding',
     'header_dependency',
@@ -33,7 +33,7 @@ flags = [
 
 out_file = './results.csv'
 
-results = pd.DataFrame({'program': [], 'flags': [], 'runtime': []})
+results = pd.DataFrame({'program': [], 'Optimizations': [], 'runtime': []})
 
 regex_time = r'[0-9]*.[0-9*]'
 regex_rslt = r'true|false'
@@ -41,10 +41,10 @@ regex_rslt = r'true|false'
 for prog in programs:
     for suf in suffixes:
         for flag in flags:
-            for i in range(rounds):
+            for i in range(runs_pp):
                 print(
                     'Running: ' + prog + suf + ' ' + ' '.join(flag) +
-                    ' [' + str(i + 1) + '/' + str(rounds) + ']')
+                    ' [' + str(i + 1) + '/' + str(runs_pp) + ']')
                 rslt = subprocess.run([
                                           '../_build/default/benchmark/benchmark.exe',
                                           './programs/' + prog + suf + '.pi4',
@@ -59,12 +59,12 @@ for prog in programs:
                 if((suf == '_safe' and result != 'true') or (suf == '_unsafe' and result != 'false') ):
                     results = results.append(
                         pd.DataFrame(
-                            {'program': [prog + suf], 'flags': [' '.join(flag)], 'runtime': ['Err']}),
+                            {'program': [prog + suf], 'Optimizations': [' '.join(flag)], 'runtime': ['Err']}),
                         ignore_index=True)
                     break
                 results = results.append(
                     pd.DataFrame(
-                        {'program': [prog + suf], 'flags': [' '.join(flag)], 'runtime': [time]}),
+                        {'program': [prog + suf], 'Optimizations': [' '.join(flag)], 'runtime': [time]}),
                     ignore_index=True)
 
 results.to_csv(out_file)
