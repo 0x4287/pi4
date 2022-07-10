@@ -244,6 +244,15 @@ module HeapTypeOps (P : Prover.S) = struct
     Log.debug(fun m -> m "Updated include_cache: %a %b" Pretty.pp_instance inst valid );
     includes_cache := Map.set !includes_cache ~key:inst ~data:valid
 
+  let rec set_includes_cache_if form neg = 
+    match form with
+    | And(f_l, f_r) -> 
+      set_includes_cache_if f_l neg;
+      set_includes_cache_if f_r neg;
+    | IsValid(_, i) -> update_includes_cache i (not neg);
+    | Neg(IsValid(_, i)) -> update_includes_cache i neg;
+    | _ -> ()
+
   let rec invalidate_includes_cache lst =
     match lst with
     | [] -> ()
@@ -670,6 +679,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
         let cache_snapshot = !includes_cache in
         let pkt_in_cache_snapshot = !pkt_in_chache in
         let pkt_out_cache_snapshot = !pkt_out_chache in
+        set_includes_cache_if e false;
         match tye with
         | Bool ->
           let x = Env.pick_fresh_name ctx "x" in
@@ -697,6 +707,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
           let tyc1_pkt_out_cache = !pkt_out_chache in
           pkt_in_chache := pkt_in_cache_snapshot;
           pkt_out_chache := pkt_out_cache_snapshot;
+          set_includes_cache_if e true;
           let%bind tyc2 =
             compute c2 (hty_var, hty_in_else) ctx header_table
           in
