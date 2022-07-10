@@ -551,7 +551,7 @@ module SemanticChecker (C : Encoding.Config) : Checker = struct
 
         Log.debug (fun m ->
             m "Ascribed input type: %a" Pretty.pp_header_type_raw ascb_hty_in);
-        Log.debug (fun m -> m "Input type: %a" Pretty.pp_header_type_raw hty_arg);
+        Log.debug (fun m -> m "Input type: %a" (Pretty.pp_header_type ctx) hty_arg);
         Log.debug (fun m ->
             m "Context used for input type: %a" Pretty.pp_context ctx);
 
