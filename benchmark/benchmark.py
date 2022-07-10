@@ -2,7 +2,7 @@ import subprocess
 import pandas as pd
 import re
 
-runs_pp = 20
+runs_pp = 10
 
 clear_line = '                                         '
 programs = [
