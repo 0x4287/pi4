@@ -361,7 +361,7 @@ module HeapTypeOps (P : Prover.S) = struct
       match rslt with
       | Some a -> 
         CLog.debug(fun m -> m "@[INSTANCE CACHE: HIT@]");
-        Ok(a)
+        Ok(not a)
       | None -> 
         CLog.debug(fun m -> m "@[INSTANCE CACHE: MISS@]");
         check_excludes ()
