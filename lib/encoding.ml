@@ -453,10 +453,30 @@ module FixedWidthBitvectorEncoding (C : Config) : S = struct
         let_bindings = [];
         constraints = []
       }
-    | Slice (s, l, r) ->
+    | Slice (Instance(_, inst) as s, l, r) ->
+      Log.debug(fun m -> m "Encoding Instance Slice: %a [%i:%i] - len: %i" Pretty.pp_instance inst l r length);
       assert (length >= r - l);
       let svar = Fmt.str "%a" (Pretty.pp_sliceable ctx) s in
-      let extract = Smtlib.(extract (r - 1) l (const svar)) in
+      let inst_size = Instance.sizeof inst in
+      let extract = Smtlib.(extract (inst_size - (l + 1)) (inst_size - r) (const svar)) in
+      (* Log.debug(fun m -> m "Encoding Slice: %a [%i:%i]" (Pretty.pp_ ctx) s l r ); *)
+      let size_diff = length - (r - l) in
+      let smt =
+        if size_diff > 0 then zero_extend size_diff extract else extract
+      in
+      return
+        { smt_term = smt;
+          dynamic_size = DynamicSize.Static (r - l);
+          let_bindings = [];
+          constraints = []
+        }
+
+    | Slice (s, l, r) ->
+      Log.debug(fun m -> m "Encoding Packet Slice: %a [%i:%i] - len: %i" (Pretty.pp_sliceable ctx) s l r length);
+      assert (length >= r - l);
+      let svar = Fmt.str "%a" (Pretty.pp_sliceable ctx) s in
+      let extract = Smtlib.(extract (C.maxlen - (l + 1)) (C.maxlen - r) (const svar)) in
+      (* Log.debug(fun m -> m "Encoding Slice: %a [%i:%i]" (Pretty.pp_ ctx) s l r ); *)
       let size_diff = length - (r - l) in
       let smt =
         if size_diff > 0 then zero_extend size_diff extract else extract
