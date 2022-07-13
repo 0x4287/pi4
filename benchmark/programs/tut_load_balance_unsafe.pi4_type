@@ -9,4 +9,14 @@
     y.nhop_table.valid ∧
     y.egress_table.valid ∧
     y.meta.valid
-    }) -> {y: ⊤ | (y.ipv4.valid ∧ (y.ipv4.proto == 0b00001001)) => y.tcp.valid}
+    }) -> {y: ⊤ | 
+                (y.stdmeta.drop == 0b1) 
+                    => (y.pkt_out.length == 0) ∧
+                (y.ipv4.valid ∧ (y.ipv4.proto == 0b00001001)) 
+                    => y.tcp.valid ∧
+                (y.ether.type == 0x0800)
+                    => y.ipv4.valid ∧
+                (y.ipv4.valid ∧ y.ecmp_table.ipv4_dst_key == y.ipv4.dst ∧ y.ecmp_table.act_ipv4_forward == 0b1)
+                    => (y.meta.ecmp_select == y.ecmp_table.ecmp_hash) ∧
+                (y.ether.valid ∧ y.stdmeta.drop == 0b1) => (y.pkt_out.length > 111)            
+        }
