@@ -322,7 +322,6 @@ let extract_to_map form : (FormulaId.t, Formula.t , FormulaId.comparator_witness
           )
         )
       ) -> 
-      (* let m_in = update_instance m_in i inst_eq in *)
       let m_in = ext inst_eq m_in in
       let k = InstEqual (v1, i1) in
       Log.debug (fun m -> m "@[%a: %a@]" pp_fromula_id k Pretty.pp_form_raw  f);
@@ -431,11 +430,11 @@ let rec fold_form form =
       if [%compare.equal: Sliceable.t] sl_s sl_f_s
         && [%compare.equal: var] sl_lo_l sl_f_hi_l then begin
         match bv, bv_f with
-        (* | Bv b_l, Bv b_r -> 
-          let b_vec = Bv(BitVector.concat b_l b_r) in 
+        | Bv b_l, Bv b_r -> 
+          let b_vec = Bv(BitVector.concat b_r b_l) in 
           let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(b_vec)) in
           Log.debug(fun m -> m "=> A @[%a@]" Pretty.pp_form_raw rslt);
-          rslt *)
+          rslt
         | Slice(sl_s_r, sl_hi_r, sl_lo_r), Concat(Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r), r) ->
           if [%compare.equal: Sliceable.t] sl_s_r sl_f_s_r then
             begin
@@ -444,14 +443,12 @@ let rec fold_form form =
                 Log.debug(fun m -> m "=> B @[%a@]" Pretty.pp_form_raw rslt);
                 rslt
               else
-                let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
-                (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in  *)
+                let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in 
                 Log.debug(fun m -> m "=> C @[%a@]" Pretty.pp_form_raw rslt);
                 rslt
             end
             else
-              (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in *)
-              let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
               Log.debug(fun m -> m "=> D @[%a@]" Pretty.pp_form_raw rslt);
               rslt
         | Slice(sl_s_r, sl_hi_r, sl_lo_r), Slice(sl_f_s_r, sl_f_hi_r, sl_f_lo_r) -> 
@@ -462,17 +459,15 @@ let rec fold_form form =
               Log.debug(fun m -> m "=> E @[%a@]" Pretty.pp_form_raw rslt);
               rslt
             else
-              (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in  *)
-              let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+              let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in 
               Log.debug(fun m -> m "=> F @[%a@]" Pretty.pp_form_raw rslt);
               rslt
           end
           else
-            (* let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in *)
-            let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
+            let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
             Log.debug(fun m -> m "=> G @[%a@]" Pretty.pp_form_raw rslt);
             rslt
-        (* | Minus _ , _
+        | Minus _ , _
         | _, Minus _
         | Concat _, _
         | _, Concat _
@@ -480,7 +475,7 @@ let rec fold_form form =
         | Bv _, _ -> 
           let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
           Log.debug(fun m -> m "=> H @[%a@]" Pretty.pp_form_raw rslt);
-          rslt *)
+          rslt
         | _ -> 
           let rslt = And (Eq(BvExpr(sl), BvExpr(bv)), Eq(BvExpr(sl_f), BvExpr(bv_f))) in
           Log.debug(fun m -> m "=> I @[%a@]" Pretty.pp_form_raw rslt);
@@ -627,15 +622,16 @@ let split_eqn eqn maxlen =
           let%bind tl = splt tail b in
           Ok 
           ( And
-            ( Eq
+            ( tl,  
+              Eq
               ( BvExpr(Slice(Instance(x, inst), hi,lo)),
-                BvExpr(Bv(sl))),
-                tl
+                BvExpr(Bv(sl)))
             )
           )
       | [] -> Error(`InvalidArgumentError "Nothing to split in given instance (split_assing)")
     in 
-    splt inst.fields bv
+    (* Process fields in reverse order to match LSB notation of slices *)
+    splt (List.rev inst.fields) bv
   in
 
 
