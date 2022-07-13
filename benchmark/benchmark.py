@@ -34,12 +34,15 @@ flags = [
 out_file = './results.csv'
 
 results = pd.DataFrame({'program': [], 'Optimizations': [], 'runtime': []})
+results.to_csv(out_file, index=False)
+
 
 regex_time = r'[0-9]*.[0-9*]'
 regex_rslt = r'true|false'
 
 for prog in programs:
     for suf in suffixes:
+        results = pd.DataFrame({'program': [], 'Optimizations': [], 'runtime': []})
         for flag in flags:
             for i in range(runs_pp):
                 print(
@@ -61,10 +64,10 @@ for prog in programs:
                         pd.DataFrame(
                             {'program': [prog + suf], 'Optimizations': [' '.join(flag)], 'runtime': ['Err']}),
                         ignore_index=True)
+                    print('Invalid Result for:' + prog + suf)
                     break
                 results = results.append(
                     pd.DataFrame(
                         {'program': [prog + suf], 'Optimizations': [' '.join(flag)], 'runtime': [time]}),
                     ignore_index=True)
-
-results.to_csv(out_file)
+        results.to_csv(out_file, mode='a', index=False, header=False)
