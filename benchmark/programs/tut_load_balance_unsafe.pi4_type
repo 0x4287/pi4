@@ -16,7 +16,6 @@
                     => y.tcp.valid ∧
                 (y.ether.type == 0x0800)
                     => y.ipv4.valid ∧
-                (y.ipv4.valid ∧ y.ecmp_table.ipv4_dst_key == y.ipv4.dst ∧ y.ecmp_table.act_ipv4_forward == 0b1)
-                    => (y.meta.ecmp_select == y.ecmp_table.ecmp_hash) ∧
-                (y.ether.valid ∧ y.stdmeta.drop == 0b1) => (y.pkt_out.length > 111)            
+                (y.ipv4.valid ∧ y.stdmeta.egress_port == y.egress_table.port_key ∧ y.egress_table.act_egress != 0b1)
+                    => (y.stdmeta.drop == 0b1)            
         }
