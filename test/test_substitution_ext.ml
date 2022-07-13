@@ -8,7 +8,7 @@ module Log = (val Logs.src_log Logging.substitution_src : Logs.LOG)
 module TestConfig = struct
   let verbose = true
 
-  let maxlen = ref(40)
+  let maxlen = ref(500)
 end
 
 module Config = struct
