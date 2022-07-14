@@ -12,6 +12,10 @@
     }) -> {y: ⊤ | 
                 (y.stdmeta.drop == 0b1) 
                     => (y.pkt_out.length == 0) ∧
+                (y.ipv4.valid ∧ (y.ipv4.proto == 0b00001001))
+                    => y.tcp.valid ∧
+                (y.ether.type == 0x0800)
+                    => y.ipv4.valid ∧
                 (y.ipv4.valid ∧ y.stdmeta.egress_port == y.egress_table.port_key ∧ y.egress_table.act_egress != 0b1)
                     => (y.stdmeta.drop == 0b1)            
         }
