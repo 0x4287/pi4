@@ -1,4 +1,3 @@
-(* open Landmark *)
 
 let test_suite =
   [ 
@@ -32,9 +31,11 @@ let () =
   Logs.set_reporter @@ Logs.format_reporter ();
   Logs.set_level ~all:true @@ Some Logs.Warning;
   (* Logs.Src.set_level Pi4.Logging.cache_src @@ Some Logs.Debug; *)
-  (* Logs.Src.set_level Pi4.Logging.substitution_src @@ Some Logs.Warning; *)
-  Logs.Src.set_level Pi4.Logging.prover_src @@ Some Logs.Warning;
+  (* Logs.Src.set_level Pi4.Logging.substitution_src @@ Some Logs.Debug; *)
+  (* Logs.Src.set_level Pi4.Logging.prover_src @@ Some Logs.Debug; *)
+  (* Logs.Src.set_level Pi4.Logging.prover_profile_src @@ Some Logs.Debug; *)
+  (* Logs.Src.set_level Pi4.Logging.encoding_src @@ Some Logs.Debug; *)
+  (* Logs.Src.set_level Pi4.Logging.typechecker_src @@ Some Logs.Debug; *)
+  (* Logs.Src.set_level Pi4.Logging.cache_src @@ Some Logs.Debug; *)
 
-
-  (* start_profiling (); *)
   Alcotest.run "Pi4" test_suite

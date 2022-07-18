@@ -8,7 +8,7 @@ module Log = (val Logs.src_log Logging.substitution_src : Logs.LOG)
 module TestConfig = struct
   let verbose = true
 
-  let maxlen = ref(500)
+  let maxlen = ref(800)
 end
 
 module Config = struct
@@ -41,36 +41,25 @@ let types_equiv program_str type_str ()=
 let ipv4_ttl_hty_str = 
   {|
   (x:{y:⊤| y.ipv4.valid && y.meta.valid}) -> 
-    {y:⊤|y.ipv4.valid &&y.meta.valid && ((x.ipv4.ttl==0b00) => (y.meta.egress_spec==0b11))}
+    {y:⊤|y.ipv4.valid &&y.meta.valid && ((x.ipv4.ttl==0x00) => (y.meta.egress_spec==0b111111111))}
   |}
 let ipv4_ttl_str = 
   {|
     header_type ipv4_t {
-      version: 1; 
-      ihl: 1; 
-      tos: 1; 
-      len: 2; 
-      id: 2; 
-      flags: 1; 
-      frag: 2; 
-      ttl: 2; 
-      proto: 1; 
-      chksum: 2; 
-      src: 3; 
-      dst: 3;
+      ttl: 8; 
     }
     header_type standard_metadata_t {
-      egress_spec: 2;
+      egress_spec: 9;
     }
     header ipv4 : ipv4_t
     header meta : standard_metadata_t
 
     if(ipv4.valid) {
-      if(ipv4.ttl == 0b00) {
-        meta.egress_spec := 0b11
+      if(ipv4.ttl == 0x00) {
+        meta.egress_spec := 0b111111111
       } else {
-        meta.egress_spec := 0b00;
-        ipv4.ttl := ipv4.ttl - 0b01
+        meta.egress_spec := 0b000000001;
+        ipv4.ttl := ipv4.ttl - 0x01
       }
     }
   |}
@@ -78,44 +67,45 @@ let ipv4_ttl_str =
 let ipv4_opt_str = 
   {|
     header_type ethernet_t {
-      dstAddr: 4;
-      srcAddr: 4;
-      etherType: 2;
+      dstAddr: 48;
+      srcAddr: 48;
+      etherType: 16;
     }
     header_type ipv4_t {
-      version: 1; 
-      ihl: 1; 
-      tos: 1; 
-      len: 2; 
-      id: 2; 
-      flags: 1; 
-      frag: 2; 
-      ttl: 1; 
-      proto: 1; 
-      chksum: 2; 
-      src: 3; 
-      dst: 3;
+      version: 4; 
+      ihl: 4; 
+      tos: 8; 
+      len: 16; 
+      id: 16; 
+      flags: 3; 
+      frag: 13; 
+      ttl: 8; 
+      proto: 8; 
+      chksum: 16; 
+      src: 32; 
+      dst: 32;
     }
     header_type ipv4opt_t {
-      type: 1;
+      type: 8;
     }
     header ether : ethernet_t
     header ipv4 : ipv4_t
     header ipv4opt : ipv4opt_t
 
     extract(ether);
-    if(ether.etherType == 0b11) {
+    if(ether.etherType == 0x0800) {
       extract(ipv4);
-      if(ipv4.ihl != 0b1) {
+      if(ipv4.ihl != 0x5) {
         extract(ipv4opt)
       }
     }
-  |}
+|}
+
 
 let ipv4_opt_hty_str = 
 {|
-(x:{y:ε | y.pkt_in.length > 31}) -> 
-  {y:⊤|((y.ipv4.valid && y.ipv4.ihl!=0b1) => y.ipv4opt.valid) && ((y.ipv4.valid && y.ipv4.ihl==0b1) => !y.ipv4opt.valid)}
+(x:{y:ε | y.pkt_in.length > 280}) -> 
+  {y:⊤|((y.ipv4.valid && y.ipv4.ihl!=0x5) => y.ipv4opt.valid) && ((y.ipv4.valid && y.ipv4.ihl==0x5) => !y.ipv4opt.valid)}
 |}
 
 let mod_router_table_str = 
@@ -153,29 +143,29 @@ let mod_router_table_hty_str =
 let safe_roundtrip_string =
   {|
   header_type ether_t {
-    dstAddr: 4;
-    srcAddr: 4;
-    etherType: 2;
+    dstAddr: 48;
+    srcAddr: 48;
+    etherType: 16;
   }
   header_type ipv4_t {
-    version: 1; 
-    ihl: 1; 
-    tos: 1; 
-    len: 2; 
-    id: 2; 
-    flags: 1; 
-    frag: 2; 
-    ttl: 1; 
-    proto: 1; 
-    chksum: 2; 
-    src: 3; 
-    dst: 3;
+    version: 4; 
+    ihl: 4; 
+    tos: 8; 
+    len: 16; 
+    id: 16; 
+    flags: 3; 
+    frag: 13; 
+    ttl: 8; 
+    proto: 8; 
+    chksum: 16; 
+    src: 32; 
+    dst: 32;
   }
   header_type vlan_t {
-    prio: 1; 
+    prio: 3; 
     id: 1; 
-    vlan: 1; 
-    etherType: 2;
+    vlan: 12; 
+    etherType: 16;
   }
   header ether : ether_t
   header ipv4 : ipv4_t
@@ -192,13 +182,13 @@ let safe_roundtrip_string =
   };
   reset;
   extract(ether);
-  if(ether.etherType == 0b01) {
+  if(ether.etherType == 0x8100) {
     extract(vlan);
-    if(vlan.etherType == 0b10) {
+    if(vlan.etherType == 0x0800) {
       extract(ipv4)
     }
   } else {
-    if(ether.etherType == 0b10) {
+    if(ether.etherType == 0x0800) {
       extract(ipv4)
     }
   }
@@ -207,68 +197,68 @@ let safe_roundtrip_string =
 let safe_roundtrip_type_string =
   {|
   (x:{y:⊤|y.ether.valid && 
-  y.ether.etherType == 0b01 && 
+  y.ether.etherType == 0x8100 && 
   y.vlan.valid && 
-  (y.ipv4.valid => y.vlan.etherType == 0b10) && 
-  ((!y.ipv4.valid) => (y.vlan.etherType != 0b10)) && 
+  (y.ipv4.valid => y.vlan.etherType == 0x0800) && 
+  ((!y.ipv4.valid) => (y.vlan.etherType != 0x0800)) && 
   y.pkt_out.length == 0 && 
   y.pkt_in.length > 0}) -> 
 {y:⊤|y.ether.valid && 
     y.ether == x.ether && 
     y.vlan.valid && 
     y.vlan == x.vlan && 
-    (x.ipv4.valid => (y.ipv4.valid && y.vlan.etherType == 0b10 && y.ipv4 == x.ipv4)) &&
-    ((!x.ipv4.valid) => (!y.ipv4.valid && y.vlan.etherType != 0b10))}
+    (x.ipv4.valid => (y.ipv4.valid && y.vlan.etherType == 0x0800 && y.ipv4 == x.ipv4)) &&
+    ((!x.ipv4.valid) => (!y.ipv4.valid && y.vlan.etherType != 0x0800))}
               |}
 
 
 let asc_roundtrip_str = 
   {|
     header_type ether_t {
-      dstAddr: 4;
-      srcAddr: 4;
-      etherType: 2;
+      dstAddr: 48;
+      srcAddr: 48;
+      etherType: 16;
     }
     header_type ipv4_t {
-      version: 1; 
-      ihl: 1; 
-      tos: 1; 
-      len: 2; 
-      id: 2; 
-      flags: 1; 
-      frag: 2; 
-      ttl: 1; 
-      proto: 1; 
-      chksum: 2; 
-      src: 3; 
-      dst: 3;
+      version: 4; 
+      ihl: 4; 
+      tos: 8; 
+      len: 16; 
+      id: 16; 
+      flags: 3; 
+      frag: 13; 
+      ttl: 8; 
+      proto: 8; 
+      chksum: 16; 
+      src: 32; 
+      dst: 32;
     }
     header_type vlan_t {
-      prio: 1; 
+      prio: 3; 
       id: 1; 
-      vlan: 1; 
-      etherType: 2;
+      vlan: 12; 
+      etherType: 16;
     }
     header ether : ether_t
     header ipv4 : ipv4_t
     header vlan : vlan_t
 
     extract(ether);
-    if(ether.etherType == 0b01) {
+    if(ether.etherType == 0x8100) {
       extract(vlan);
-      if(vlan.etherType == 0b10) {
+      if(vlan.etherType == 0x0800) {
         extract(ipv4)
       }
     } else {
-      if(ether.etherType == 0b10) {
+      if(ether.etherType == 0x0800) {
         extract(ipv4)
       }
     };
     if(!vlan.valid) {
       add(vlan);
-      ether.etherType := 0b01;
+      ether.etherType := 0x8100;
       if(ipv4.valid) {
-        vlan.etherType := 0b10
+        vlan.etherType := 0x0800
       }
     };
     ((if(ether.valid) {
@@ -282,63 +272,64 @@ let asc_roundtrip_str =
     };
     reset;
     extract(ether);
-    if(ether.etherType == 0b01) {
+    if(ether.etherType == 0x8100) {
       extract(vlan);
-      if(vlan.etherType == 0b10) {
+      if(vlan.etherType == 0x0800) {
         extract(ipv4)
       }
     } else {
-      if(ether.etherType == 0b10) {
+      if(ether.etherType == 0x0800) {
         extract(ipv4)
       }
     }) as (x :  
           {z:ether~| 
-                z.ether.etherType == 0b01 && 
+                z.ether.etherType == 0x8100 && 
                 z.vlan.valid && 
-                (z.ipv4.valid => z.vlan.etherType == 0b10) && 
-                ((!z.ipv4.valid) => z.vlan.etherType != 0b10) && 
+                (z.ipv4.valid => z.vlan.etherType == 0x0800) && 
+                ((!z.ipv4.valid) => z.vlan.etherType != 0x0800) && 
                 z.pkt_out.length == 0 && 
                 z.pkt_in.length > 0}
     ) -> {y:⊤| x =i= y })
 
+
   |}
 
 let asc_roundtrip_hty = 
-  {|(x:{y:ε|y.pkt_out.length == 0 && y.pkt_in.length > 36}) -> ⊤|}
+  {|(x:{y:ε|y.pkt_out.length == 0 && y.pkt_in.length > 304}) -> ⊤|}
 
 let vlan_decap_str = 
 
     {|
       header_type ether_t {
-        dstAddr: 4;
-        srcAddr: 4;
-        etherType: 2;
+        dstAddr: 48;
+        srcAddr: 48;
+        etherType: 16;
       }
       header_type ipv4_t {
-        version: 1; 
-        ihl: 1; 
-        tos: 1; 
-        len: 2; 
-        id: 2; 
-        flags: 1; 
-        frag: 1; 
-        ttl: 2; 
-        proto: 1; 
-        chksum: 2; 
-        src: 3; 
-        dst: 3;
+        version: 4; 
+        ihl: 4; 
+        tos: 8; 
+        len: 16; 
+        id: 16; 
+        flags: 3; 
+        frag: 13; 
+        ttl: 8; 
+        proto: 8; 
+        chksum: 16; 
+        src: 32; 
+        dst: 32;
       }
       header_type vlan_t {
-        prio: 1; 
+        prio: 3; 
         id: 1; 
-        vlan: 1; 
-        etherType: 2;
+        vlan: 12; 
+        etherType: 16;
       }
       header_type forward_table_t {
-        ipv4_dst_key: 3;
+        ipv4_dst_key: 32;
         act: 1;
-        data_eth_src: 4;
-        data_eth_dst: 4;
+        data_eth_src: 48;
+        data_eth_dst: 48;
       }
       header ether : ether_t
       header ipv4 : ipv4_t
@@ -346,13 +337,13 @@ let vlan_decap_str =
       header forward_table : forward_table_t
 
       extract(ether);
-      if(ether.etherType == 0b10) {
+      if(ether.etherType == 0x8100) {
         extract(vlan);
-        if(vlan.etherType == 0b01) {
+        if(vlan.etherType == 0x0800) {
           extract(ipv4)
         }
       } else {
-        if(ether.etherType == 0b10) {
+        if(ether.etherType == 0x0800) {
           extract(ipv4)
         }
       };
@@ -360,7 +351,7 @@ let vlan_decap_str =
         if(forward_table.act == 0b1) {
           ether.dstAddr := forward_table.data_eth_dst;
           ether.srcAddr := forward_table.data_eth_src;
-          ipv4.ttl := ether.etherType
+          ipv4.ttl := ipv4.ttl - 0x01
         }
       };
       if(vlan.valid) {
@@ -369,7 +360,7 @@ let vlan_decap_str =
       }
     |}
 let vlan_decap_type = 
-  "(x:{y: forward_table |y.pkt_in.length > 36}) → {z:⊤|¬z.vlan.valid}"
+  "(x:{y: forward_table |y.pkt_in.length > 304}) → {z:⊤|¬z.vlan.valid}"
 
 let det_forward_str = 
 {|
@@ -676,114 +667,6 @@ let tut_basic_tunnel_hty =
 
   |}
 
-let tut_ecn_str = 
-  {|
-  header_type ether_t {
-  dst: 48;
-  src: 48;
-  type: 16;
-}
-header_type ipv4_t {
-  version: 4;
-  ihl: 4;
-  diffserv: 6;
-  ecn: 2;
-  len: 16;
-  id: 16;
-  flags: 3;
-  frag: 13;
-  ttl: 8;
-  proto: 8;
-  chksum: 16;
-  src: 32;
-  dst: 32;
-}
-header_type standard_metadata_t {
-  ingress_port: 9;
-  egress_spec: 9;
-  egress_port: 9;
-  instance_type: 32;
-  packet_length: 32;
-  enq_timestamp: 32;
-  enq_qdepth: 19;
-  deq_timedelta: 32;
-  deq_qdepth: 19;
-  ingress_global_timestamp: 48;
-  mcast_grp: 16;
-  egress_rid: 16;
-  checksum_error: 1;
-  priority: 3;
-  drop: 1;
-}
-header_type forward_table_t {
-  ipv4_dst_key: 32;
-  act_ipv4_forward: 1;
-  dst: 48;
-  port: 9;
-  ttl: 8;
-}
-
-header ether : ether_t
-header ipv4 : ipv4_t
-header stdmeta : standard_metadata_t
-header forward_table : forward_table_t
-
-extract(ether);
-if(ether.type == 0x0800) {
-  extract(ipv4)
-};
-
-if(ipv4.valid) {
-  if(ipv4.dst == forward_table.ipv4_dst_key) {
-    if(forward_table.act_ipv4_forward == 0b1) {
-      stdmeta.egress_spec := forward_table.port;
-      ether.src := ether.dst;
-      ether.dst := forward_table.dst;
-      ipv4.ttl := forward_table.ttl
-    } else {
-      stdmeta.drop := 0b1;
-      stdmeta.mcast_grp := 0x0000
-    }
-  } else {
-    stdmeta.drop := 0b1;
-    stdmeta.mcast_grp := 0x0000
-  }
-};
-
-if(ipv4.valid){
-  if(ipv4.ecn == 0b01 ∨ ipv4.ecn == 0b10){
-    if(stdmeta.enq_qdepth > 0b0000000000000001001){
-      ipv4.ecn := 0b11
-    }
-  }
-};
-
-if(stdmeta.drop != 0b1) {
-  if(ether.valid){
-    remit(ether)
-  };
-  if(ipv4.valid) {
-    remit(ipv4)
-  }
-}
-
-
-
-  
-  |}
-
-let tut_ecn_hty =
-  {|
-  (x:{y:⊤|
-  y.pkt_out.length == 0 ∧
-  y.pkt_in.length > 272 ∧
-  ¬y.ether.valid ∧
-  ¬y.ipv4.valid ∧
-  y.stdmeta.valid ∧
-  y.forward_table.valid
-  }) -> ⊤
-
-  |}
 
 
 let tut_load_balance_str = 
@@ -941,15 +824,14 @@ let tut_basic_min_hty =
 let test_set = 
   [
     test_case "ipv4_ttl" `Quick (types_equiv ipv4_ttl_str ipv4_ttl_hty_str);
+    test_case "ipv4_opt" `Quick (types_equiv ipv4_opt_str ipv4_opt_hty_str);
     test_case "mod_router_table" `Quick (types_equiv mod_router_table_str mod_router_table_hty_str);
     test_case "roundtrip" `Quick (types_equiv safe_roundtrip_string safe_roundtrip_type_string);
     test_case "asc_roundtrip" `Quick (types_equiv asc_roundtrip_str asc_roundtrip_hty);
-    test_case "ipv4_opt" `Quick (types_equiv ipv4_opt_str ipv4_opt_hty_str);
     test_case "vlan_decap" `Quick (types_equiv vlan_decap_str vlan_decap_type);
     test_case "determined forwarding" `Quick (types_equiv det_forward_str det_forward_type);
     test_case "header dependency" `Quick (types_equiv header_dep_str header_dep_type);
     test_case "tut basic" `Quick (types_equiv tut_basic_str tut_basic_hty);
     test_case "tut basic tunnel" `Quick (types_equiv tut_basic_tunnel_str tut_basic_tunnel_hty);
-    test_case "tut ecn" `Quick (types_equiv tut_ecn_str tut_ecn_hty);
     test_case "tut load_balance" `Quick (types_equiv tut_load_balance_str tut_load_balance_hty);
   ]

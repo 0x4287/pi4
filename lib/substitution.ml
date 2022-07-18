@@ -483,8 +483,9 @@ let rec fold_form form =
             let rslt = Eq(BvExpr(Slice(sl_s, sl_hi_l, sl_f_lo_l)), BvExpr(Concat(bv, bv_f))) in
             Log.debug(fun m -> m "=> G @[%a@]" Pretty.pp_form_raw rslt);
             rslt
-        | Minus _ , _
-        | _, Minus _
+        (* Disabled due to issues with equivalence checks --> See Test_equiv.test_concat_minus_broken *)
+        (* | Minus _ , _
+        | _, Minus _ *)
         | Concat _, _
         | _, Concat _
         | _, Bv _
